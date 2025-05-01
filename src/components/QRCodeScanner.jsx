@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
+/**
+ * QRCodeScanner コンポーネント
+ * - JSON形式またはカンマ区切りで companyId と makerId を取得
+ * - プレーンテキストや不正な内容の場合はアラート表示
+ */
 const QRCodeScanner = ({ setCompanyId, setMakerId }) => {
   const qrRegionId = 'reader';
 
@@ -14,26 +19,45 @@ const QRCodeScanner = ({ setCompanyId, setMakerId }) => {
           scanner = new Html5Qrcode(qrRegionId);
 
           await scanner.start(
-            { facingMode: 'environment' }, // 背面カメラ推奨
+            { facingMode: 'environment' }, // 背面カメラを推奨
             { fps: 10, qrbox: 250 },
-            (decodedText) => {
+            decodedText => {
               console.log('✅ QRコード検出:', decodedText);
+              let cid, mid;
+              let parsed = null;
+              // まず JSON 形式を試行
               try {
-                const parsed = JSON.parse(decodedText);
+                parsed = JSON.parse(decodedText);
                 if (parsed.companyId && parsed.makerId) {
-                  setCompanyId(parsed.companyId);
-                  setMakerId(parsed.makerId);
-                  alert(`会社ID：${parsed.companyId}\nメーカーID：${parsed.makerId}`);
-                  scanner.stop();
+                  cid = parsed.companyId;
+                  mid = parsed.makerId;
                 } else {
-                  alert('QRコードにcompanyId / makerIdが含まれていません');
+                  parsed = null;
                 }
               } catch {
-                alert('QRコードの内容がJSON形式ではありません');
+                parsed = null;
+              }
+
+              // JSON でなければカンマ区切り形式を試行
+              if (!parsed) {
+                const parts = decodedText.split(/[,，]/).map(s => s.trim());
+                if (parts.length >= 2) {
+                  cid = parts[0];
+                  mid = parts[1];
+                }
+              }
+
+              if (cid && mid) {
+                setCompanyId(cid);
+                setMakerId(mid);
+                alert(`会社ID：${cid}\nメーカーID：${mid}`);
+                scanner.stop();
+              } else {
+                alert('QRコードに companyId と makerId を含む形式ではありません');
               }
             },
-            (errorMessage) => {
-              // 読み取りエラー時（軽微なもので毎回出るのでログだけ）
+            errorMessage => {
+              // 読み取りエラー時は詳細ログ
               console.log('読み取り中...', errorMessage);
             }
           );
@@ -50,9 +74,7 @@ const QRCodeScanner = ({ setCompanyId, setMakerId }) => {
 
     return () => {
       if (scanner) {
-        scanner.stop().then(() => {
-          scanner.clear();
-        });
+        scanner.stop().then(() => scanner.clear());
       }
     };
   }, [setCompanyId, setMakerId]);
