@@ -4,8 +4,10 @@ import react from '@vitejs/plugin-react';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // react-router-dom を必ずプリバンドル
   optimizeDeps: {
-    include: ['react-router-dom']
-  }
+    include: [
+      'react-router-dom',
+      'firebase/firestore'
+    ],
+  },
 });
