@@ -26,51 +26,41 @@ const OrderEntry = () => {
   const [takahashiContact, setTakahashiContact] = useState('');
   const [personName, setPersonName] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
-  const [scanningFor, setScanningFor] = useState(null);
+  const [scanningFor, setScanningFor] = useState(null); // 'company' or 'maker'
   const [existingOrderId, setExistingOrderId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  // 納品先住所切り替え
   useEffect(() => {
-    if (deliveryOption !== 'その他(備考欄)') setCustomAddress('納品先住所');
-    else setCustomAddress('');
+    setCustomAddress(deliveryOption === 'その他(備考欄)' ? '' : '納品先住所');
   }, [deliveryOption]);
 
+  // 会社名取得
   useEffect(() => {
-    const fetchCompany = async () => {
-      if (!companyId) return setCompanyName('');
-      try {
-        const snap = await getDoc(doc(db, 'companies', companyId));
-        setCompanyName(snap.exists() ? snap.data().name || '該当なし' : '該当なし');
-      } catch {
-        setCompanyName('取得失敗');
-      }
-    };
-    fetchCompany();
+    if (!companyId) return setCompanyName('');
+    getDoc(doc(db, 'companies', companyId))
+      .then(snap => setCompanyName(snap.exists() ? snap.data().name || '該当なし' : '該当なし'))
+      .catch(() => setCompanyName('取得失敗'));
   }, [companyId]);
 
+  // メーカー名取得
   useEffect(() => {
-    const fetchMaker = async () => {
-      if (!makerId) return setMakerName('');
-      try {
-        const snap = await getDoc(doc(db, 'makers', makerId));
-        setMakerName(snap.exists() ? snap.data().name || '該当なし' : '該当なし');
-      } catch {
-        setMakerName('取得失敗');
-      }
-    };
-    fetchMaker();
+    if (!makerId) return setMakerName('');
+    getDoc(doc(db, 'makers', makerId))
+      .then(snap => setMakerName(snap.exists() ? snap.data().name || '該当なし' : '該当なし'))
+      .catch(() => setMakerName('取得失敗'));
   }, [makerId]);
 
+  // 既存オーダー取得
   useEffect(() => {
-    const load = async () => {
-      if (!companyId || !makerId) return;
-      const snap = await getDocs(
-        query(
-          collection(db, 'orders'),
-          where('companyId', '==', companyId),
-          where('makerId', '==', makerId)
-        )
-      );
+    if (!companyId || !makerId) return;
+    getDocs(
+      query(
+        collection(db, 'orders'),
+        where('companyId', '==', companyId),
+        where('makerId', '==', makerId)
+      )
+    ).then(snap => {
       if (!snap.empty) {
         const data = snap.docs[0].data();
         setOrders(data.items || []);
@@ -82,29 +72,50 @@ const OrderEntry = () => {
         setExistingOrderId(snap.docs[0].id);
         setIsEditing(true);
       }
-    };
-    load();
+    });
   }, [companyId, makerId]);
 
-  const handleInputChange = (i, field, v) => {
+  const handleInputChange = (idx, field, val) => {
     const arr = [...orders];
-    arr[i][field] = v;
+    arr[idx][field] = val;
     setOrders(arr);
   };
   const addRow = () => setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
-  const removeRow = i => setOrders(orders.filter((_, idx) => idx !== i));
+  const removeRow = idx => setOrders(orders.filter((_, i) => i !== idx));
+
   const isValid = companyId && makerId && orders.every(o => o.name && o.quantity && o.price);
 
+  const handleToggleScan = mode => setScanningFor(prev => (prev === mode ? null : mode));
+  const handleCancelScan = () => setScanningFor(null);
+
   const handleSubmit = async () => {
-    if (!isValid) return alert('必須項目を入力');
-    const payload = { companyId, makerId, deliveryOption, customAddress: deliveryOption === 'その他(備考欄)' ? customAddress : '納品先住所', takahashiContact, personName, deliveryDate, timestamp: serverTimestamp(), items: orders };
+    if (!isValid) return alert('必須項目を入力してください');
+    const payload = {
+      companyId,
+      makerId,
+      deliveryOption,
+      customAddress: deliveryOption === 'その他(備考欄)' ? customAddress : '納品先住所',
+      takahashiContact,
+      personName,
+      deliveryDate,
+      timestamp: serverTimestamp(),
+      items: orders,
+    };
     try {
-      if (existingOrderId) await updateDoc(doc(db, 'orders', existingOrderId), payload);
-      else await addDoc(collection(db, 'orders'), payload);
-      alert(isEditing ? '更新しました' : '登録しました');
+      if (existingOrderId) {
+        await updateDoc(doc(db, 'orders', existingOrderId), payload);
+        alert('更新しました');
+      } else {
+        await addDoc(collection(db, 'orders'), payload);
+        alert('登録しました');
+      }
+      // リセット
       setOrders([{ itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
       setCompanyId(''); setMakerId(''); setTakahashiContact(''); setPersonName(''); setDeliveryDate(''); setExistingOrderId(null); setIsEditing(false);
-    } catch { alert('失敗'); }
+    } catch (e) {
+      console.error(e);
+      alert('送信に失敗しました');
+    }
   };
 
   return (
@@ -112,18 +123,30 @@ const OrderEntry = () => {
       <h2 className="text-2xl font-bold">展示会 発注登録</h2>
       {isEditing && <p className="text-blue-600">※ 編集モード</p>}
 
-      {/* ID セクション */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded shadow">
+      {/* IDセクション */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-white p-4 rounded shadow">
         <div>
           <label className="block mb-1 font-semibold">会社ID</label>
           <div className="flex space-x-2">
             <input
+              type="text"
               className="flex-1 border rounded px-2 py-1 text-sm"
+              placeholder="会社ID"
               value={companyId}
               onChange={e => setCompanyId(e.target.value)}
-              placeholder="会社ID"
             />
-            <button onClick={() => setScanningFor('company')} className="bg-blue-500 text-white px-3 rounded text-sm">Scan</button>
+            {scanningFor === 'company' ? (
+              <QRCodeScanner
+                mode="company"
+                setCompanyId={setCompanyId}
+                onCancel={handleCancelScan}
+              />
+            ) : (
+              <button
+                onClick={() => handleToggleScan('company')}
+                className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+              >Scan</button>
+            )}
           </div>
           {companyName && <p className="mt-1 text-gray-600 text-sm">会社名: {companyName}</p>}
         </div>
@@ -131,21 +154,31 @@ const OrderEntry = () => {
           <label className="block mb-1 font-semibold">メーカーID</label>
           <div className="flex space-x-2">
             <input
+              type="text"
               className="flex-1 border rounded px-2 py-1 text-sm"
+              placeholder="メーカーID"
               value={makerId}
               onChange={e => setMakerId(e.target.value)}
-              placeholder="メーカーID"
             />
-            <button onClick={() => setScanningFor('maker')} className="bg-purple-500 text-white px-3 rounded text-sm">Scan</button>
+            {scanningFor === 'maker' ? (
+              <QRCodeScanner
+                mode="maker"
+                setMakerId={setMakerId}
+                onCancel={handleCancelScan}
+              />
+            ) : (
+              <button
+                onClick={() => handleToggleScan('maker')}
+                className="bg-purple-500 text-white px-3 py-1 rounded text-sm"
+              >Scan</button>
+            )}
           </div>
           {makerName && <p className="mt-1 text-gray-600 text-sm">メーカー名: {makerName}</p>}
         </div>
       </div>
 
-      {scanningFor && <QRCodeScanner onScan={id => { if (scanningFor === 'company') setCompanyId(id); else setMakerId(id); setScanningFor(null); }} />}
-
       {/* 配送 & 担当者 */}
-      <div className="bg-white p-4 rounded shadow space-y-4">
+      <div className="bg-white p-4 rounded shadow">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block mb-1 font-semibold">納品方法</label>
@@ -155,20 +188,15 @@ const OrderEntry = () => {
           </div>
           <div>
             <label className="block mb-1 font-semibold">納品先住所</label>
-            <input
-              className="w-full border rounded px-2 py-1 text-sm"
-              disabled={deliveryOption !== 'その他(備考欄)'}
-              value={customAddress}
-              onChange={e => setCustomAddress(e.target.value)}
-            />
+            <input className="w-full border rounded px-2 py-1 text-sm" disabled={deliveryOption !== 'その他(備考欄)'} value={customAddress} onChange={e => setCustomAddress(e.target.value)} />
           </div>
           <div>
             <label className="block mb-1 font-semibold">高橋本社担当者</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" value={takahashiContact} onChange={e => setTakahashiContact(e.target.value)} placeholder="山田太郎" />
+            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="山田太郎" value={takahashiContact} onChange={e => setTakahashiContact(e.target.value)} />
           </div>
           <div>
             <label className="block mb-1 font-semibold">お客様担当者</label>
-            <input className="w-full border rounded px-2 py-1 text-sm" value={personName} onChange={e => setPersonName(e.target.value)} placeholder="担当者名" />
+            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="担当者名" value={personName} onChange={e => setPersonName(e.target.value)} />
           </div>
           <div className="md:col-span-2">
             <label className="block mb-1 font-semibold">納品希望日</label>
@@ -177,11 +205,11 @@ const OrderEntry = () => {
         </div>
       </div>
 
-      {/* 明細テーブル */}
+      {/* 明細 */}
       <div className="bg-white p-4 rounded shadow overflow-x-auto">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-semibold">明細</h3>
-          <button onClick={addRow} className="bg-green-500 text-white px-3 rounded text-sm">+ 行追加</button>
+          <button onClick={addRow} className="bg-green-500 text-white px-3 py-1 rounded text-sm">+ 行追加</button>
         </div>
         <div className="space-y-2">
           {orders.map((o, i) => (
@@ -189,27 +217,19 @@ const OrderEntry = () => {
               {['品番','商品名','数量','単価','備考'].map((label, idx) => (
                 <div key={label} className="flex flex-col">
                   <label className="text-xs text-gray-500">{label}</label>
-                  <input
-                    type={idx >=2 && idx <=3 ? 'number' : 'text'}
-                    value={[o.itemCode, o.name, o.quantity, o.price, o.remarks][idx]}
-                    onChange={e => handleInputChange(i, ['itemCode','name','quantity','price','remarks'][idx], e.target.value)}
-                    className="border rounded px-2 py-1 text-sm"
-                  />
+                  <input type={idx>=2&&idx<=3?'number':'text'} value={[o.itemCode,o.name,o.quantity,o.price,o.remarks][idx]} onChange={e=>handleInputChange(i,['itemCode','name','quantity','price','remarks'][idx],e.target.value)} className="border rounded px-2 py-1 text-sm" />
                 </div>
               ))}
-              <button onClick={() => removeRow(i)} className="bg-red-500 text-white px-2 py-1 rounded text-sm">削除</button>
+              <button onClick={()=>removeRow(i)} className="bg-red-500 text-white px-2 py-1 rounded text-sm">削除</button>
             </div>
           ))}
         </div>
       </div>
 
+      {/* 登録ボタン */}
       <div className="flex justify-end">
-        <button
-          onClick={handleSubmit}
-          disabled={!isValid}
-          className={`px-6 py-2 rounded ${isValid ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600 cursor-not-allowed'} text-sm`}
-        >
-          {isEditing ? '更新' : '登録'}
+        <button onClick={handleSubmit} disabled={!isValid} className={`px-6 py-2 rounded text-sm ${isValid?'bg-blue-600 text-white':'bg-gray-300 text-gray-600 cursor-not-allowed'}`}>
+          {isEditing?'更新':'登録'}
         </button>
       </div>
     </div>

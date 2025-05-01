@@ -6,6 +6,12 @@ import { Html5Qrcode } from 'html5-qrcode';
  * - モードに応じて会社ID/MakerIDスキャン
  * - 任意の文字列を読み取れる
  * - スキャン/キャンセルボタンを切り替え
+ *
+ * Props:
+ * - mode: 'company' | 'maker'
+ * - setCompanyId: (id: string) => void
+ * - setMakerId: (id: string) => void
+ * - onCancel: () => void
  */
 const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
   const qrRegionId = 'reader';
@@ -30,10 +36,13 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
             { fps: 10, qrbox: 250 },
             decodedText => {
               const value = decodedText.trim();
-              if (mode === 'company') setCompanyId(value);
-              else setMakerId(value);
+              if (mode === 'company') {
+                setCompanyId(value);
+              } else {
+                setMakerId(value);
+              }
               setIsScanning(false);
-             onCancel && onCancel();
+              onCancel && onCancel();
             },
             errorMessage => console.log('読み取り中...', errorMessage)
           );
@@ -45,16 +54,21 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
       })();
     } else {
       (async () => {
-        scanner = scannerRef.current;
-        if (scanner) {
-          try { await scanner.stop(); await scanner.clear(); } catch {};
+        const sc = scannerRef.current;
+        if (sc) {
+          try {
+            await sc.stop();
+            await sc.clear();
+          } catch {}
         }
       })();
     }
-    // アンマウント時にも停止
+
     return () => {
       const sc = scannerRef.current;
-      if (sc) sc.stop().catch(() => {}).then(() => sc.clear());
+      if (sc) {
+        sc.stop().catch(() => {}).then(() => sc.clear());
+      }
     };
   }, [isScanning, mode, setCompanyId, setMakerId, onCancel]);
 
@@ -72,7 +86,6 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
       <h3 className="font-semibold mb-2">
         {mode === 'company' ? '会社IDスキャン' : 'メーカーIDスキャン'}
       </h3>
-      {/* 常に DOM に配置し、表示・非表示を制御 */}
       <div
         id={qrRegionId}
         className="w-full max-w-xs mx-auto border p-2 mb-2"
