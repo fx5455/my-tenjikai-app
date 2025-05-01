@@ -12,62 +12,82 @@ import { db } from '../firebase';
  */
 const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
   const qrRegionId = 'reader';
-  const html5QrRef = useRef(null);
+  const scannerRef = useRef(null);
   const [makerLocked, setMakerLocked] = useState(false);
+  const [active, setActive] = useState(true);
 
-  useEffect(() => {
-    let scanner;
-    const startScanner = async () => {
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        if (!devices || !devices.length) {
-          alert('カメラが見つかりませんでした');
-          return;
-        }
-        scanner = new Html5Qrcode(qrRegionId);
-        html5QrRef.current = scanner;
-        await scanner.start(
-          { facingMode: 'environment' }, // 背面カメラ推奨
-          { fps: 10, qrbox: 250 },
-          async decodedText => {
-            console.log('✅ QRコード検出:', decodedText);
-            const idValue = decodedText.trim();
-            if (mode === 'company') {
-              const ref = doc(db, 'companies', idValue);
-              const snap = await getDoc(ref);
-              if (!snap.exists()) {
-                alert('該当する会社がありません');
-                return;
-              }
+  // スキャナ起動
+  const startScanner = async () => {
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      if (!devices || !devices.length) {
+        alert('カメラが見つかりませんでした');
+        return;
+      }
+      const scanner = new Html5Qrcode(qrRegionId);
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 250 },
+        async decodedText => {
+          console.log('✅ QRコード検出:', decodedText);
+          const idValue = decodedText.trim();
+          // Firestore チェック
+          if (mode === 'company') {
+            const snap = await getDoc(doc(db, 'companies', idValue));
+            if (!snap.exists()) alert('該当する会社がありません');
+            else {
               setCompanyId(idValue);
               await scanner.stop();
-            } else {
-              // mode === 'maker'
-              if (makerLocked) return;
-              const ref = doc(db, 'makers', idValue);
-              const snap = await getDoc(ref);
-              if (!snap.exists()) {
-                alert('該当するメーカーがありません');
-                return;
-              }
+              setActive(false);
+            }
+          } else {
+            // 免费読み取り: JSON や任意文字列をそのまま扱う
+            if (makerLocked) return;
+            const snap = await getDoc(doc(db, 'makers', idValue));
+            if (!snap.exists()) alert('該当するメーカーがありません');
+            else {
               setMakerId(idValue);
             }
-          },
-          errorMessage => console.log('読み取り中...', errorMessage)
-        );
-      } catch (err) {
-        console.error('カメラ起動エラー:', err);
-        alert('カメラが使用できませんでした');
-      }
-    };
+          }
+        },
+        errorMessage => console.log('読み取り中...', errorMessage)
+      );
+    } catch (err) {
+      console.error('カメラ起動エラー:', err);
+      alert('カメラが使用できませんでした');
+    }
+  };
 
-    startScanner();
+  // スキャナ停止
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        await scannerRef.current.clear();
+      } catch {}
+    }
+  };
+
+  // mount / active 変化時にスキャナ制御
+  useEffect(() => {
+    if (active) startScanner();
     return () => {
-      if (scanner) {
-        scanner.stop().catch(() => {}).then(() => scanner.clear());
-      }
+      stopScanner();
     };
-  }, [mode, makerLocked, setCompanyId, setMakerId]);
+  }, [active, mode, makerLocked]);
+
+  // キャンセルハンドラ
+  const handleCancel = () => {
+    stopScanner();
+    setActive(false);
+    onCancel();
+  };
+
+  // 再スキャンハンドラ
+  const handleRescan = () => {
+    if (!active) setActive(true);
+  };
 
   return (
     <div className="my-4">
@@ -84,17 +104,15 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
           </label>
         )}
         <button
-          onClick={() => {
-            const scanner = html5QrRef.current;
-            if (scanner) {
-              scanner.stop().catch(() => {}).then(() => scanner.clear());
-            }
-            onCancel();
-          }}
+          onClick={handleCancel}
           className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-        >
-          キャンセル
-        </button>
+        >キャンセル</button>
+        {!active && (
+          <button
+            onClick={handleRescan}
+            className="bg-green-500 text-white px-3 py-1 rounded text-sm"
+          >再スキャン</button>
+        )}
       </div>
     </div>
   );
