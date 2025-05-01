@@ -3,15 +3,16 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 /**
  * QRCodeScanner コンポーネント
- * - モードに関わらず任意の文字列をスキャンして返却
- * - モード切替(会社ID or メーカーID)を明示表示
- * - キャンセル＆再スキャン機能
+ * - モードに応じて会社ID/MakerIDのスキャンUIを表示
+ * - 任意の文字列を読み取り可能
+ * - スキャン/キャンセルボタンを切り替え
  */
 const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
   const qrRegionId = 'reader';
   const scannerRef = useRef(null);
-  const [isScanning, setIsScanning] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
 
+  // スキャナ起動
   const startScanner = async () => {
     try {
       const devices = await Html5Qrcode.getCameras();
@@ -26,22 +27,21 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
         { fps: 10, qrbox: 250 },
         decodedText => {
           const value = decodedText.trim();
-          if (mode === 'company') {
-            setCompanyId(value);
-          } else {
-            setMakerId(value);
-          }
-          scanner.stop();
+          if (mode === 'company') setCompanyId(value);
+          else setMakerId(value);
+          stopScanner();
           setIsScanning(false);
         },
         errorMessage => console.log('読み取り中...', errorMessage)
       );
+      setIsScanning(true);
     } catch (err) {
       console.error('カメラ起動エラー:', err);
       alert('カメラが使用できませんでした');
     }
   };
 
+  // スキャナ停止
   const stopScanner = async () => {
     try {
       await scannerRef.current?.stop();
@@ -49,43 +49,41 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
     } catch {}
   };
 
+  // コンポーネントアンマウント時に停止
   useEffect(() => {
-    if (isScanning) startScanner();
-    return () => {
-      if (!isScanning) stopScanner();
-    };
-  }, [isScanning, mode]);
+    return () => stopScanner();
+  }, []);
 
-  const handleCancel = () => {
-    stopScanner();
-    setIsScanning(false);
-    onCancel();
+  // ボタンハンドラ
+  const handleToggle = () => {
+    if (isScanning) {
+      stopScanner();
+      setIsScanning(false);
+      onCancel();
+    } else {
+      startScanner();
+    }
   };
-
-  const handleRescan = () => setIsScanning(true);
 
   return (
     <div className="my-4 text-center">
       <h3 className="font-semibold mb-2">
-        {mode === 'company' ? '会社IDスキャン中' : 'メーカーIDスキャン中'}
+        {mode === 'company' ? '会社IDスキャン' : 'メーカーIDスキャン'}
       </h3>
-      <div id={qrRegionId} className="w-full max-w-xs mx-auto border p-2 mb-2" />
-      <div className="flex justify-center space-x-4">
-        <button
-          onClick={handleCancel}
-          className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-        >
-          キャンセル
-        </button>
-        {!isScanning && (
-          <button
-            onClick={handleRescan}
-            className="bg-green-500 text-white px-3 py-1 rounded text-sm"
-          >
-            再スキャン
-          </button>
-        )}
-      </div>
+
+      {/* スキャン中のみ表示 */}
+      {isScanning && (
+        <div id={qrRegionId} className="w-full max-w-xs mx-auto border p-2 mb-2" />
+      )}
+
+      <button
+        onClick={handleToggle}
+        className={`px-4 py-2 rounded text-sm ${
+          isScanning ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+        }`}
+      >
+        {isScanning ? 'キャンセル' : 'スキャン'}
+      </button>
     </div>
   );
 };
