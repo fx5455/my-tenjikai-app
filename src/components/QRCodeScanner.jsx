@@ -3,8 +3,8 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 /**
  * QRCodeScanner コンポーネント
- * - モードに応じて会社ID/MakerIDのスキャンUIを表示
- * - 任意の文字列を読み取り可能
+ * - モードに応じて会社ID/MakerIDスキャン
+ * - 任意の文字列を読み取れる
  * - スキャン/キャンセルボタンを切り替え
  */
 const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
@@ -12,56 +12,58 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  // スキャナ起動
-  const startScanner = async () => {
-    try {
-      const devices = await Html5Qrcode.getCameras();
-      if (!devices?.length) {
-        alert('カメラが見つかりませんでした');
-        return;
-      }
-      const scanner = new Html5Qrcode(qrRegionId);
-      scannerRef.current = scanner;
-      await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: 250 },
-        decodedText => {
-          const value = decodedText.trim();
-          if (mode === 'company') setCompanyId(value);
-          else setMakerId(value);
-          stopScanner();
-          setIsScanning(false);
-        },
-        errorMessage => console.log('読み取り中...', errorMessage)
-      );
-      setIsScanning(true);
-    } catch (err) {
-      console.error('カメラ起動エラー:', err);
-      alert('カメラが使用できませんでした');
-    }
-  };
-
-  // スキャナ停止
-  const stopScanner = async () => {
-    try {
-      await scannerRef.current?.stop();
-      await scannerRef.current?.clear();
-    } catch {}
-  };
-
-  // コンポーネントアンマウント時に停止
   useEffect(() => {
-    return () => stopScanner();
-  }, []);
+    let scanner;
+    if (isScanning) {
+      (async () => {
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (!devices?.length) {
+            alert('カメラが見つかりませんでした');
+            setIsScanning(false);
+            return;
+          }
+          scanner = new Html5Qrcode(qrRegionId);
+          scannerRef.current = scanner;
+          await scanner.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: 250 },
+            decodedText => {
+              const value = decodedText.trim();
+              if (mode === 'company') setCompanyId(value);
+              else setMakerId(value);
+              setIsScanning(false);
+             onCancel && onCancel();
+            },
+            errorMessage => console.log('読み取り中...', errorMessage)
+          );
+        } catch (err) {
+          console.error('カメラ起動エラー:', err);
+          alert('カメラが使用できませんでした');
+          setIsScanning(false);
+        }
+      })();
+    } else {
+      (async () => {
+        scanner = scannerRef.current;
+        if (scanner) {
+          try { await scanner.stop(); await scanner.clear(); } catch {};
+        }
+      })();
+    }
+    // アンマウント時にも停止
+    return () => {
+      const sc = scannerRef.current;
+      if (sc) sc.stop().catch(() => {}).then(() => sc.clear());
+    };
+  }, [isScanning, mode, setCompanyId, setMakerId, onCancel]);
 
-  // ボタンハンドラ
   const handleToggle = () => {
     if (isScanning) {
-      stopScanner();
       setIsScanning(false);
-      onCancel();
+      onCancel && onCancel();
     } else {
-      startScanner();
+      setIsScanning(true);
     }
   };
 
@@ -70,12 +72,12 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
       <h3 className="font-semibold mb-2">
         {mode === 'company' ? '会社IDスキャン' : 'メーカーIDスキャン'}
       </h3>
-
-      {/* スキャン中のみ表示 */}
-      {isScanning && (
-        <div id={qrRegionId} className="w-full max-w-xs mx-auto border p-2 mb-2" />
-      )}
-
+      {/* 常に DOM に配置し、表示・非表示を制御 */}
+      <div
+        id={qrRegionId}
+        className="w-full max-w-xs mx-auto border p-2 mb-2"
+        style={{ display: isScanning ? 'block' : 'none' }}
+      />
       <button
         onClick={handleToggle}
         className={`px-4 py-2 rounded text-sm ${
