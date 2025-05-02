@@ -34,57 +34,31 @@ const AdminOrderPdf = () => {
     })();
   }, []);
 
-  // QRコード読み取り
-  const handleScan = id => {
-    setSelectedGroup(id);
-    setScanningFor(null);
-  };
-
-  // 検索
-  const handleCompanySearch = () => {
-    setFilteredCompanies(
-      companies.filter(c =>
-        c.name.toLowerCase().includes(searchCompanyName.toLowerCase())
-      )
-    );
-  };
-  const handleMakerSearch = () => {
-    setFilteredMakers(
-      makers.filter(m =>
-        m.name.toLowerCase().includes(searchMakerName.toLowerCase())
-      )
-    );
-  };
-
-  // リセット
+  // 検索・リセット等は省略（既存コードそのまま）
+  const handleCompanySearch = () => setFilteredCompanies(
+    companies.filter(c => c.name.toLowerCase().includes(searchCompanyName.toLowerCase())));
+  const handleMakerSearch = () => setFilteredMakers(
+    makers.filter(m => m.name.toLowerCase().includes(searchMakerName.toLowerCase())));
   const handleReset = () => {
-    setSearchCompanyName('');
-    setSearchMakerName('');
-    setFilteredCompanies([]);
-    setFilteredMakers([]);
-    setSelectedGroup('');
-    setScanningFor(null);
+    setSearchCompanyName(''); setSearchMakerName('');
+    setFilteredCompanies([]); setFilteredMakers([]);
+    setSelectedGroup(''); setScanningFor(null);
   };
-
-  // 絞り込み
-  const filteredOrders = orders.filter(o =>
-    selectedGroup
-      ? (mode === 'maker' ? o.makerId === selectedGroup : o.companyId === selectedGroup)
-      : true
+  const filteredOrders = orders.filter(o => selectedGroup
+    ? (mode === 'maker' ? o.makerId === selectedGroup : o.companyId === selectedGroup)
+    : true
   );
 
   // 集計
   const summaryData = (mode === 'maker'
     ? makers.map(m => {
-        const total = orders
-          .filter(o => o.makerId === m.id)
+        const total = orders.filter(o => o.makerId === m.id)
           .flatMap(o => o.items)
           .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
         return { id: m.id, name: m.name, total };
       })
     : companies.map(c => {
-        const total = orders
-          .filter(o => o.companyId === c.id)
+        const total = orders.filter(o => o.companyId === c.id)
           .flatMap(o => o.items)
           .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
         return { id: c.id, name: c.name, total };
@@ -92,8 +66,7 @@ const AdminOrderPdf = () => {
   ).filter(s => s.total > 0);
 
   // 印刷合計
-  const totalAmount = filteredOrders
-    .flatMap(o => o.items)
+  const totalAmount = filteredOrders.flatMap(o => o.items)
     .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
 
   // 印刷
@@ -170,18 +143,23 @@ const AdminOrderPdf = () => {
         集計を{showSummary ? '非表示' : '表示'}
       </button>
 
-      {/* 集計内容 */}
+      {/* 集計内容（ヘッダー付きに戻す） */}
       {showSummary && (
-        <ul className="mb-6">
-          {summaryData.map(s => (
-            <li key={s.id}>{s.name}：合計{s.total.toLocaleString()}円</li>
-          ))}
-        </ul>
+        <div className="mb-6">
+          <h3 className="font-semibold mb-2">
+            {mode === 'maker'
+              ? 'メーカー別集計（合計金額）'
+              : '会社別集計（合計金額）'}
+          </h3>
+          <ul className="list-disc ml-4">
+            {summaryData.map(s => (
+              <li key={s.id}>
+                {s.name}：合計{s.total.toLocaleString()}円
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-
-      <h2 className="text-xl font-bold mb-4">
-        {mode === 'maker' ? 'メーカー別発注一覧' : '会社別発注一覧'}
-      </h2>
 
       {/* モード切替 */}
       <div className="space-x-2 mb-4">
@@ -220,7 +198,7 @@ const AdminOrderPdf = () => {
           className="border p-1"
         >
           <option value="">--{mode==='maker'? 'メーカー' : '会社'}を選択--</option>
-          {(mode==='maker'? filteredMakers : filteredCompanies).map(g => (
+          {( (mode==='maker' ? (filteredMakers.length ? filteredMakers : makers) : (filteredCompanies.length ? filteredCompanies : companies)) ).map(g => (
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}
         </select>
