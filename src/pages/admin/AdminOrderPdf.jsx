@@ -3,19 +3,24 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
+import QRCodeScanner from '../../components/QRCodeScanner';
 import { FaPrint, FaSearch, FaUndo } from 'react-icons/fa';
 
 const AdminOrderPdf = () => {
   const [orders, setOrders] = useState([]);
-  const [mode, setMode] = useState('maker');           // 'maker' or 'company'
+  const [mode, setMode] = useState('maker'); // 'maker' or 'company'
   const [selectedGroup, setSelectedGroup] = useState('');
   const [makers, setMakers] = useState([]);
   const [companies, setCompanies] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [scanningFor, setScanningFor] = useState(null);
+  const [searchCompanyName, setSearchCompanyName] = useState('');
+  const [searchMakerName, setSearchMakerName] = useState('');
+  const [filteredCompanies, setFilteredCompanies] = useState([]);
+  const [filteredMakers, setFilteredMakers] = useState([]);
   const [showSummary, setShowSummary] = useState(false);
   const printRef = useRef(null);
 
-  // データ取得
+  // 一度にデータ取得
   useEffect(() => {
     (async () => {
       const [ms, cs, os] = await Promise.all([
@@ -29,50 +34,121 @@ const AdminOrderPdf = () => {
     })();
   }, []);
 
-  // グループ絞り込み
+  // QRコード読み取り
+  const handleScan = id => {
+    setSelectedGroup(id);
+    setScanningFor(null);
+  };
+
+  // 検索
+  const handleCompanySearch = () => {
+    setFilteredCompanies(
+      companies.filter(c =>
+        c.name.toLowerCase().includes(searchCompanyName.toLowerCase())
+      )
+    );
+  };
+  const handleMakerSearch = () => {
+    setFilteredMakers(
+      makers.filter(m =>
+        m.name.toLowerCase().includes(searchMakerName.toLowerCase())
+      )
+    );
+  };
+
+  // リセット
+  const handleReset = () => {
+    setSearchCompanyName('');
+    setSearchMakerName('');
+    setFilteredCompanies([]);
+    setFilteredMakers([]);
+    setSelectedGroup('');
+    setScanningFor(null);
+  };
+
+  // 絞り込み
   const filteredOrders = orders.filter(o =>
     selectedGroup
       ? (mode === 'maker' ? o.makerId === selectedGroup : o.companyId === selectedGroup)
       : true
   );
 
-  // 集計データ
+  // 集計
   const summaryData = (mode === 'maker'
-    ? makers : companies
-  ).map(g => {
-    const total = orders
-      .filter(o => (mode === 'maker' ? o.makerId : o.companyId) === g.id)
-      .flatMap(o => o.items)
-      .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
-    return { ...g, total };
-  }).filter(s => s.total > 0 && s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    ? makers.map(m => {
+        const total = orders
+          .filter(o => o.makerId === m.id)
+          .flatMap(o => o.items)
+          .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
+        return { id: m.id, name: m.name, total };
+      })
+    : companies.map(c => {
+        const total = orders
+          .filter(o => o.companyId === c.id)
+          .flatMap(o => o.items)
+          .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
+        return { id: c.id, name: c.name, total };
+      })
+  ).filter(s => s.total > 0);
 
   // 印刷合計
   const totalAmount = filteredOrders
     .flatMap(o => o.items)
     .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
 
-  // 印刷処理
+  // 印刷
   const handlePrint = () => {
     if (!printRef.current) return;
     const contentHTML = printRef.current.innerHTML;
-    const titleText = mode === 'maker' ? 'メーカー発注一覧' : '会社発注一覧';
+    const isCompany = mode === 'company';
+    const titleText = isCompany ? '発注書（控え）' : '発注書';
+
+    const recipient = isCompany
+      ? companies.find(c => c.id === selectedGroup)?.name + ' 御中'
+      : '';
+
     const w = window.open('', '_blank', 'width=800,height=600');
     w.document.write(`
-      <html><head><title>${titleText}</title><style>
-        @page { size:A4; margin:20mm; }
-        body{margin:0;padding:0;font-family:Arial,sans-serif;}
-        .container{padding:10mm;}
-        h1{text-align:center;margin-bottom:10mm;}
-        .summary{margin-bottom:8mm;font-size:14px;}
-        .order{border-bottom:1px solid #000;padding:4mm 0;}
-      </style></head><body>
-        <div class="container">
-          <h1>${titleText}</h1>
+      <html>
+      <head><title>${titleText}</title><style>
+        @page { size: A4; margin: 20mm; }
+        @media print {
+          body { counter-reset: page; }
+          footer::after { content: "ページ " counter(page); display: block; }
+        }
+        body { margin:0; padding:0; font-family:Arial,sans-serif; }
+        .printContainer { width:170mm; margin:0 auto; padding:10mm; box-sizing:border-box; }
+        .header-main { text-align:center; font-size:24px; font-weight:bold; margin-bottom:6mm; }
+        .header-sub { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10mm; font-size:12px; }
+        .header-sub .left { font-size:16px; }
+        .order-item { margin-bottom:8mm; padding-bottom:4mm; border-bottom:1px solid #000; page-break-inside:avoid; }
+        .order-item p, .order-item ul { font-size:12px; margin:2px 0; }
+        .order-item ul { list-style:disc inside; margin-left:4mm; }
+        .summary-box { display:flex; justify-content:flex-end; align-items:center; margin-top:10mm; }
+        .summary-box .label { background:#333; color:#fff; padding:4px 12px; font-weight:bold; }
+        .summary-box .amount { border:1px solid #333; padding:4px 12px; margin-left:2px; font-size:16px; }
+        footer { position:fixed; bottom:10mm; left:0; right:0; text-align:center; font-size:12px; }
+      </style></head>
+      <body>
+        <div class="printContainer">
+          <div class="header-main">${titleText}</div>
+          <div class="header-sub">
+            <div class="left">${recipient}</div>
+            <div class="right">
+              株式会社高橋本社<br>
+              〒131-0032 東京都墨田区東向島1-3-4<br>
+              TEL 03-3610-1010 FAX 03-3610-2720
+            </div>
+          </div>
           ${contentHTML}
-          <div class="summary">合計: ${totalAmount.toLocaleString()} 円</div>
+          <div class="summary-box">
+            <div class="label">合計</div>
+            <div class="amount">${totalAmount.toLocaleString()} 円（税込）</div>
+          </div>
         </div>
-      </body></html>
+        <footer></footer>
+      </body>
+      </html>
     `);
     w.document.close();
     w.focus();
@@ -80,77 +156,114 @@ const AdminOrderPdf = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen space-y-6">
+    <div className="p-6">
       {/* 戻るボタン */}
       <Link to="/" className="inline-block mb-4 text-blue-600 hover:underline">
         ← 発注登録に戻る
       </Link>
 
-      {/* モード切替 */}
-      <div className="flex space-x-2 mb-4">
-        {['maker','company'].map(m => (
-          <button key={m}
-            onClick={() => { setMode(m); setSelectedGroup(''); setSearchTerm(''); }}
-            className={`px-3 py-1 rounded ${mode===m?'bg-blue-600 text-white':'bg-gray-200'}`}
-          >{m==='maker'?'メーカー別':'会社別'}</button>
-        ))}
-      </div>
-
-      {/* 検索 & 選択 */}
-      <div className="flex items-center space-x-2 mb-4">
-        <input
-          type="text"
-          placeholder={mode==='maker'?'メーカー名検索':'会社名検索'}
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="border rounded px-2 py-1 flex-1"
-        />
-        <select
-          value={selectedGroup}
-          onChange={e => setSelectedGroup(e.target.value)}
-          className="border rounded px-2 py-1"
-        >
-          <option value="">全て</option>
-          {(mode==='maker'?makers:companies)
-            .filter(g => g.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
-        <button onClick={() => { setSelectedGroup(''); setSearchTerm(''); }}
-          className="px-2 py-1 bg-gray-300 rounded">
-          <FaUndo /></button>
-      </div>
-
-      {/* 集計表示 */}
-      <button onClick={() => setShowSummary(!showSummary)}
-        className="px-3 py-1 bg-green-600 text-white rounded mb-4">
-        {showSummary?'集計非表示':'集計表示'}
+      {/* 集計トグル */}
+      <button
+        onClick={() => setShowSummary(prev => !prev)}
+        className="bg-green-600 text-white px-3 py-1 rounded mb-4"
+      >
+        集計を{showSummary ? '非表示' : '表示'}
       </button>
+
+      {/* 集計内容 */}
       {showSummary && (
-        <ul className="list-disc ml-4 mb-6">
+        <ul className="mb-6">
           {summaryData.map(s => (
-            <li key={s.id}>{s.name}: {s.total.toLocaleString()} 円</li>
+            <li key={s.id}>{s.name}：合計{s.total.toLocaleString()}円</li>
           ))}
         </ul>
       )}
 
       <h2 className="text-xl font-bold mb-4">
-        {mode==='maker'?'メーカー別発注一覧':'会社別発注一覧'}
+        {mode === 'maker' ? 'メーカー別発注一覧' : '会社別発注一覧'}
       </h2>
 
+      {/* モード切替 */}
+      <div className="space-x-2 mb-4">
+        <button
+          onClick={() => { setMode('maker'); handleReset(); }}
+          className={`px-3 py-1 rounded ${mode==='maker'? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        >
+          メーカー別
+        </button>
+        <button
+          onClick={() => { setMode('company'); handleReset(); }}
+          className={`px-3 py-1 rounded ${mode==='company'? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        >
+          会社別
+        </button>
+      </div>
+
+      {/* 検索・選択・リセット (QR無し) */}
+      <div className="flex items-center space-x-2 mb-4">
+        <input
+          type="text"
+          placeholder={mode==='maker'? 'メーカー名検索' : '会社名検索'}
+          value={mode==='maker'? searchMakerName : searchCompanyName}
+          onChange={e => mode==='maker'? setSearchMakerName(e.target.value) : setSearchCompanyName(e.target.value)}
+          className="border p-1"
+        />
+        <button
+          onClick={mode==='maker'? handleMakerSearch : handleCompanySearch}
+          className={`px-3 py-1 rounded ${mode==='maker'? 'bg-purple-600 text-white':'bg-blue-600 text-white'}`}
+        >
+          <FaSearch /> 検索
+        </button>
+        <select
+          value={selectedGroup}
+          onChange={e => setSelectedGroup(e.target.value)}
+          className="border p-1"
+        >
+          <option value="">--{mode==='maker'? 'メーカー' : '会社'}を選択--</option>
+          {(mode==='maker'? filteredMakers : filteredCompanies).map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </select>
+        <button
+          onClick={handleReset}
+          className="bg-gray-500 text-white px-3 py-1 rounded"
+        >
+          <FaUndo /> リセット
+        </button>
+      </div>
+
       {/* 印刷ボタン */}
-      <button onClick={handlePrint} className="px-4 py-1 bg-yellow-500 text-white rounded">
-        <FaPrint /> 印刷
-      </button>
+      {filteredOrders.length > 0 && (
+        <button
+          onClick={handlePrint}
+          className="bg-yellow-500 text-white px-3 py-1 rounded mb-4 no-print"
+        >
+          <FaPrint /> 印刷
+        </button>
+      )}
 
       {/* 印刷対象 */}
       <div ref={printRef} className="mt-4 space-y-4">
         {filteredOrders.map(order => (
-          <div key={order.id} className="order">
-            <div className="text-sm text-gray-600">発注ID: {order.id}</div>
-            <ul className="list-disc ml-4">
-              {order.items.map((it, i) => (
-                <li key={i}>{`${it.itemCode} / ${it.name}：${it.quantity} × ${it.price} 円 (備考: ${it.remarks||'なし'})`}</li>
-              ))}
+          <div key={order.id} className="order-item">
+            <p>発注日: {order.timestamp?.toDate().toLocaleString()}</p>
+            <p>納品方法: {order.deliveryOption}</p>
+            <p>納品先住所: {order.customAddress}</p>
+            <p>お客様担当者: {order.personName || '未入力'}</p>
+            <p>高橋本社担当者: {order.takahashiContact || '未入力'}</p>
+            <p>納品希望日: {order.deliveryDate}</p>
+            <ul className="list-disc ml-4 mt-2">
+              {order.items.map((item, idx) => {
+                const cname = companies.find(c => c.id === order.companyId)?.name || '';
+                const mname = makers.find(m => m.id === order.makerId)?.name || '';
+                return (
+                  <li key={idx}>
+                    {mode === 'company'
+                      ? `${mname} / ${item.itemCode} / ${item.name}：${item.quantity}個 × ${item.price}円 (備考: ${item.remarks || 'なし'})`
+                      : `${cname} / ${item.itemCode} / ${item.name}：${item.quantity}個 × ${item.price}円 (備考: ${item.remarks || 'なし'})`}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
