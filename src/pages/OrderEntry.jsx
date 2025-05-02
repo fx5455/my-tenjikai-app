@@ -30,28 +30,34 @@ const OrderEntry = () => {
   const [existingOrderId, setExistingOrderId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 納品先住所切り替え
+  // 納品先住所の初期値・切り替え
   useEffect(() => {
     setCustomAddress(deliveryOption === 'その他(備考欄)' ? '' : '納品先住所');
   }, [deliveryOption]);
 
-  // 会社名取得
+  // 会社名の取得
   useEffect(() => {
-    if (!companyId) return setCompanyName('');
+    if (!companyId) {
+      setCompanyName('');
+      return;
+    }
     getDoc(doc(db, 'companies', companyId))
       .then(snap => setCompanyName(snap.exists() ? snap.data().name || '該当なし' : '該当なし'))
       .catch(() => setCompanyName('取得失敗'));
   }, [companyId]);
 
-  // メーカー名取得
+  // メーカー名の取得
   useEffect(() => {
-    if (!makerId) return setMakerName('');
+    if (!makerId) {
+      setMakerName('');
+      return;
+    }
     getDoc(doc(db, 'makers', makerId))
       .then(snap => setMakerName(snap.exists() ? snap.data().name || '該当なし' : '該当なし'))
       .catch(() => setMakerName('取得失敗'));
   }, [makerId]);
 
-  // 既存オーダー取得
+  // 既存オーダーのロード
   useEffect(() => {
     if (!companyId || !makerId) return;
     getDocs(
@@ -75,6 +81,7 @@ const OrderEntry = () => {
     });
   }, [companyId, makerId]);
 
+  // 明細操作
   const handleInputChange = (idx, field, val) => {
     const arr = [...orders];
     arr[idx][field] = val;
@@ -83,13 +90,19 @@ const OrderEntry = () => {
   const addRow = () => setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
   const removeRow = idx => setOrders(orders.filter((_, i) => i !== idx));
 
+  // 検証
   const isValid = companyId && makerId && orders.every(o => o.name && o.quantity && o.price);
 
+  // スキャントグル
   const handleToggleScan = mode => setScanningFor(prev => (prev === mode ? null : mode));
   const handleCancelScan = () => setScanningFor(null);
 
+  // 送信処理
   const handleSubmit = async () => {
-    if (!isValid) return alert('必須項目を入力してください');
+    if (!isValid) {
+      alert('必須項目を入力してください');
+      return;
+    }
     const payload = {
       companyId,
       makerId,
@@ -111,7 +124,13 @@ const OrderEntry = () => {
       }
       // リセット
       setOrders([{ itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
-      setCompanyId(''); setMakerId(''); setTakahashiContact(''); setPersonName(''); setDeliveryDate(''); setExistingOrderId(null); setIsEditing(false);
+      setCompanyId('');
+      setMakerId('');
+      setTakahashiContact('');
+      setPersonName('');
+      setDeliveryDate('');
+      setExistingOrderId(null);
+      setIsEditing(false);
     } catch (e) {
       console.error(e);
       alert('送信に失敗しました');
@@ -123,8 +142,9 @@ const OrderEntry = () => {
       <h2 className="text-2xl font-bold">展示会 発注登録</h2>
       {isEditing && <p className="text-blue-600">※ 編集モード</p>}
 
-      {/* IDセクション */}
+      {/* 会社/メーカー ID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-white p-4 rounded shadow">
+        {/* 会社ID */}
         <div>
           <label className="block mb-1 font-semibold">会社ID</label>
           <div className="flex space-x-2">
@@ -145,11 +165,14 @@ const OrderEntry = () => {
               <button
                 onClick={() => handleToggleScan('company')}
                 className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-              >Scan</button>
+              >
+                Scan
+              </button>
             )}
           </div>
           {companyName && <p className="mt-1 text-gray-600 text-sm">会社名: {companyName}</p>}
         </div>
+        {/* メーカーID */}
         <div>
           <label className="block mb-1 font-semibold">メーカーID</label>
           <div className="flex space-x-2">
@@ -170,7 +193,9 @@ const OrderEntry = () => {
               <button
                 onClick={() => handleToggleScan('maker')}
                 className="bg-purple-500 text-white px-3 py-1 rounded text-sm"
-              >Scan</button>
+              >
+                Scan
+              </button>
             )}
           </div>
           {makerName && <p className="mt-1 text-gray-600 text-sm">メーカー名: {makerName}</p>}
