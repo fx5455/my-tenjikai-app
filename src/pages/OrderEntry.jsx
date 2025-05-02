@@ -161,8 +161,10 @@ const OrderEntry = () => {
     }
   };
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen space-y-6">
+return (
+  <div className="bg-gray-50 min-h-screen py-6 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-4xl mx-auto p-6 space-y-6"></div>
+
       <h2 className="text-2xl font-bold">展示会 発注登録</h2>
       {isEditing && <p className="text-blue-600">※ 編集モード</p>}
 
@@ -356,8 +358,8 @@ const OrderEntry = () => {
           {isEditing ? '更新' : '登録'}
         </button>
       </div>
-    </div>
-  );
+          </div>
+);
 };
 
 export default OrderEntry;
