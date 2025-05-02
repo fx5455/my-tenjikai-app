@@ -88,7 +88,14 @@ const AdminOrderPdf = () => {
         @page { size: A4; margin: 20mm; }
         @media print {
           body { counter-reset: page; }
-          footer::after { content: "ページ " counter(page); display: block; }
+          
+         /* ページ番号と総ページ数を表示 */
+footer::after {
+content: "ページ " counter(page) " / " counter(pages);
+display: block;
+text-align: center;
+margin-top: 4mm;
+ }
         }
         body { margin:0; padding:0; font-family:Arial,sans-serif; }
         .printContainer { width:170mm; margin:0 auto; padding:10mm; box-sizing:border-box; }
