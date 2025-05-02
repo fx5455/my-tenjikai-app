@@ -150,6 +150,24 @@ const OrderEntry = () => {
       <h2 className="text-2xl font-bold">展示会 発注登録</h2>
       {isEditing && <p className="text-blue-600">※ 編集モード</p>}
 
+      {/* 一覧リンク */}
+<div className="flex space-x-3 justify-end">
+  {/* メーカー別一覧 */}
+  <Link
+    to={`/maker-orders/${makerId || ''}`}
+    className="px-4 py-2 rounded text-white bg-indigo-600"
+  >
+    メーカー別発注一覧を見る
+  </Link>
+  {/* 管理画面PDF */}
+  <Link
+    to="/admin/orders/pdf"
+    className="px-4 py-2 bg-green-600 text-white rounded"
+  >
+    管理画面PDF
+  </Link>
+</div>
+
       {/* QRスキャンオーバーレイ */}
       {scanningFor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
