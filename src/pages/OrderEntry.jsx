@@ -44,7 +44,7 @@ const OrderEntry = () => {
   const [existingOrderId, setExistingOrderId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 納品先住所の切り替え
+  // 納品先住所の初期化／切り替え
   useEffect(() => {
     setCustomAddress(
       deliveryOption === 'その他(備考欄)' ? '' : '納品先住所'
@@ -159,28 +159,74 @@ const OrderEntry = () => {
     }
   };
 
+  // 共通スタイル
+  const containerStyle = {
+    maxWidth: '800px',
+    margin: '0 auto',
+    padding: '16px',
+  };
+  const cardStyle = {
+    background: '#fff',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    padding: '16px',
+    marginBottom: '16px',
+  };
+  const sectionStyle = {
+    marginBottom: '16px',
+    padding: '12px',
+    background: '#f7f7f7',
+    borderRadius: '4px',
+  };
+
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
-        <h2 className="text-2xl font-bold">
+    <div style={containerStyle}>
+      {/* メインカード */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>
           展示会 発注登録{' '}
-          {isEditing && <span className="text-blue-600">(編集中)</span>}
+          {isEditing && <span style={{ color: '#2563EB' }}>(編集中)</span>}
         </h2>
 
         {/* 管理画面ボタン */}
-        <div className="flex justify-end">
+        <div style={{ textAlign: 'right', marginBottom: '12px' }}>
           <button
             onClick={handleAdminClick}
-            className="px-4 py-2 bg-green-600 text-white rounded"
+            style={{
+              padding: '8px 16px',
+              background: '#10B981',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+            }}
           >
             管理画面
           </button>
         </div>
 
-        {/* QRスキャンモーダル */}
+        {/* スキャンモーダル */}
         {scanningFor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-4 rounded">
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                background: '#fff',
+                padding: '16px',
+                borderRadius: '4px',
+              }}
+            >
               <QRCodeScanner
                 mode={scanningFor}
                 setCompanyId={(id) =>
@@ -196,174 +242,197 @@ const OrderEntry = () => {
         )}
 
         {/* お客様／メーカー */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div>
-            <label className="font-semibold">お客様ID</label>
-            <div className="flex space-x-2">
+        <div style={{ ...sectionStyle, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          {/* お客様ID */}
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ fontWeight: '600' }}>お客様ID</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 value={companyId}
                 onChange={(e) => setCompanyId(e.target.value)}
                 placeholder="お客様ID"
-                className="flex-1 border rounded px-2 py-1"
+                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
               />
               <button
                 onClick={() => setScanningFor('company')}
-                className="px-3 py-1 bg-blue-500 text-white rounded"
+                style={{
+                  padding: '8px 12px',
+                  background: '#3B82F6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                }}
               >
                 Scan
               </button>
             </div>
-            {companyName && (
-              <p className="text-gray-600 mt-1">→ {companyName}</p>
-            )}
+            {companyName && <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {companyName}</div>}
           </div>
-          <div>
-            <label className="font-semibold">メーカーID</label>
-            <div className="flex space-x-2 items-center">
+
+          {/* メーカーID */}
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ fontWeight: '600' }}>メーカーID</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input
                 value={makerId}
                 onChange={(e) => setMakerId(e.target.value)}
                 disabled={makerLocked}
                 placeholder="メーカーID"
-                className="flex-1 border rounded px-2 py-1"
+                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
               />
               <button
                 onClick={() => !makerLocked && setScanningFor('maker')}
                 disabled={makerLocked}
-                className="px-3 py-1 bg-purple-500 text-white rounded"
+                style={{
+                  padding: '8px 12px',
+                  background: '#A855F7',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                }}
               >
                 Scan
               </button>
-              <label className="flex items-center space-x-1">
+              <label style={{ marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
                 <input
                   type="checkbox"
                   checked={makerLocked}
                   onChange={(e) => setMakerLocked(e.target.checked)}
+                  style={{ marginRight: '4px' }}
                 />
-                <span>固定</span>
+                固定
               </label>
             </div>
-            {makerName && (
-              <p className="text-gray-600 mt-1">→ {makerName}</p>
-            )}
+            {makerName && <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {makerName}</div>}
           </div>
         </div>
 
         {/* 配送・担当者 */}
-        <div className="bg-gray-100 rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="font-semibold">納品方法</label>
-            <select
-              value={deliveryOption}
-              onChange={(e) => setDeliveryOption(e.target.value)}
-              className="w-full border rounded px-2 py-1"
-            >
-              {['会社入れ', '現場入れ', '倉庫入れ', 'その他(備考欄)'].map(
-                (opt) => (
+        <div style={sectionStyle}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            {/* 納品方法 */}  
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>納品方法</label>
+              <select
+                value={deliveryOption}
+                onChange={(e) => setDeliveryOption(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                {['会社入れ', '現場入れ', '倉庫入れ', 'その他(備考欄)'].map((opt) => (
                   <option key={opt}>{opt}</option>
-                )
-              )}
-            </select>
-          </div>
-          <div>
-            <label className="font-semibold">納品先住所</label>
-            <input
-              value={customAddress}
-              disabled={deliveryOption !== 'その他(備考欄)'}
-              onChange={(e) => setCustomAddress(e.target.value)}
-              className="w-full border rounded px-2 py-1"
-            />
-          </div>
-          <div>
-            <label className="font-semibold">社内担当</label>
-            <input
-              value={takahashiContact}
-              onChange={(e) => setTakahashiContact(e.target.value)}
-              placeholder="山田太郎"
-              className="w-full border rounded px-2 py-1"
-            />
-          </div>
-          <div>
-            <label className="font-semibold">顧客担当</label>
-            <input
-              value={personName}
-              onChange={(e) => setPersonName(e.target.value)}
-              placeholder="担当者名"
-              className="w-full border rounded px-2 py-1"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="font-semibold">納品希望日</label>
-            <input
-              type="date"
-              value={deliveryDate}
-              onChange={(e) => setDeliveryDate(e.target.value)}
-              className="w-full border rounded px-2 py-1"
-            />
+                ))}
+              </select>
+            </div>
+
+            {/* 納品先住所 */}
+            <div style={{ flex: '2 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>納品先住所</label>
+              <input
+                value={customAddress}
+                disabled={deliveryOption !== 'その他(備考欄)'}
+                onChange={(e) => setCustomAddress(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              />
+            </div>
+
+            {/* 社内担当 */}
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>社内担当</label>
+              <input
+                value={takahashiContact}
+                onChange={(e) => setTakahashiContact(e.target.value)}
+                placeholder="山田太郎"
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              />
+            </div>
+
+            {/* 顧客担当 */}
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>顧客担当</label>
+              <input
+                value={personName}
+                onChange={(e) => setPersonName(e.target.value)}
+                placeholder="担当者名"
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              />
+            </div>
+
+            {/* 納品希望日 */}
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>納品希望日</label>
+              <input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              />
+            </div>
           </div>
         </div>
 
         {/* 明細 */}
-        <div className="bg-gray-100 rounded-lg p-4">
-          <div className="flex justify-between mb-2">
-            <h3 className="font-semibold">明細</h3>
+        <div style={sectionStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <h3 style={{ fontWeight: '600' }}>明細</h3>
             <button
               onClick={addRow}
-              className="px-3 py-1 bg-green-500 text-white rounded"
+              style={{
+                padding: '6px 12px',
+                background: '#10B981',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+              }}
             >
               + 行追加
             </button>
           </div>
-          <div className="space-y-2">
-            {orders.map((o, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-end"
+          {orders.map((o, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'flex-end',
+                marginBottom: '8px',
+              }}
+            >
+              {['itemCode', 'name', 'quantity', 'price', 'remarks'].map((field, idx) => (
+                <div key={field} style={{ flex: idx < 2 ? '2 1 120px' : '1 1 80px' }}>
+                  <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '2px' }}>
+                    {['品番', '商品名', '数量', '単価', '備考'][idx]}
+                  </label>
+                  <input
+                    type={idx === 2 || idx === 3 ? 'number' : 'text'}
+                    value={[o.itemCode, o.name, o.quantity, o.price, o.remarks][idx]}
+                    onChange={(e) => handleInputChange(i, field, e.target.value)}
+                    style={{ width: '100%', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                </div>
+              ))}
+              <button
+                onClick={() => removeRow(i)}
+                style={{ padding: '6px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: '4px' }}
               >
-                {['品番', '商品名', '数量', '単価', '備考'].map((lab, idx) => (
-                  <div key={lab} className="flex flex-col">
-                    <label className="text-xs">{lab}</label>
-                    <input
-                      type={idx >= 2 && idx <= 3 ? 'number' : 'text'}
-                      value={[
-                        o.itemCode,
-                        o.name,
-                        o.quantity,
-                        o.price,
-                        o.remarks,
-                      ][idx]}
-                      onChange={(e) =>
-                        handleInputChange(
-                          i,
-                          ['itemCode', 'name', 'quantity', 'price', 'remarks'][idx],
-                          e.target.value
-                        )
-                      }
-                      className="border rounded px-2 py-1 text-sm"
-                    />
-                  </div>
-                ))}
-                <button
-                  onClick={() => removeRow(i)}
-                  className="px-2 py-1 bg-red-500 text-white rounded"
-                >
-                  削除
-                </button>
-              </div>
-            ))}
-          </div>
+                削除
+              </button>
+            </div>
+          ))}
         </div>
 
         {/* 登録ボタン */}
-        <div className="flex justify-end">
+        <div style={{ textAlign: 'right' }}>
           <button
             onClick={handleSubmit}
             disabled={!isValid}
-            className={`px-6 py-2 rounded ${
-              isValid
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-            }`}
+            style={{
+              padding: '10px 20px',
+              background: isValid ? '#3B82F6' : '#D1D5DB',
+              color: isValid ? '#fff' : '#6B7280',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isValid ? 'pointer' : 'not-allowed',
+            }}
           >
             {isEditing ? '更新' : '登録'}
           </button>
