@@ -76,9 +76,9 @@ const AdminOrderPdf = () => {
     const isCompany = mode === 'company';
     const titleText = isCompany ? '発注書（控え）' : '発注書';
 
-    const recipient = isCompany
-      ? companies.find(c => c.id === selectedGroup)?.name + ' 御中'
-      : '';
+    const recipient = mode === 'company'
+       ? companies.find(c => c.id === selectedGroup)?.name + ' 御中'
+       : makers.find(m => m.id === selectedGroup)?.name + ' 御中';
 
     const w = window.open('', '_blank', 'width=800,height=600');
     w.document.write(`
