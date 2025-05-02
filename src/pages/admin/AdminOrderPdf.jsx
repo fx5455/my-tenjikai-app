@@ -149,7 +149,7 @@ const AdminOrderPdf = () => {
           <h3 className="font-semibold mb-2">
             {mode === 'maker'
               ? 'メーカー別集計（合計金額）'
-              : '会社別集計（合計金額）'}
+              : 'お客様別集計（合計金額）'}
           </h3>
           <ul className="list-disc ml-4">
             {summaryData.map(s => (
@@ -173,7 +173,7 @@ const AdminOrderPdf = () => {
           onClick={() => { setMode('company'); handleReset(); }}
           className={`px-3 py-1 rounded ${mode==='company'? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
-          会社別
+          お客様別
         </button>
       </div>
 
@@ -181,7 +181,7 @@ const AdminOrderPdf = () => {
       <div className="flex items-center space-x-2 mb-4">
         <input
           type="text"
-          placeholder={mode==='maker'? 'メーカー名検索' : '会社名検索'}
+          placeholder={mode==='maker'? 'メーカー名検索' : 'お客様名検索'}
           value={mode==='maker'? searchMakerName : searchCompanyName}
           onChange={e => mode==='maker'? setSearchMakerName(e.target.value) : setSearchCompanyName(e.target.value)}
           className="border p-1"
@@ -197,7 +197,7 @@ const AdminOrderPdf = () => {
           onChange={e => setSelectedGroup(e.target.value)}
           className="border p-1"
         >
-          <option value="">--{mode==='maker'? 'メーカー' : '会社'}を選択--</option>
+          <option value="">--{mode==='maker'? 'メーカー' : 'お客様'}を選択--</option>
           {( (mode==='maker' ? (filteredMakers.length ? filteredMakers : makers) : (filteredCompanies.length ? filteredCompanies : companies)) ).map(g => (
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}

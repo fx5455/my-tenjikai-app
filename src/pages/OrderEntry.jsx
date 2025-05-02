@@ -20,7 +20,7 @@ const OrderEntry = () => {
     { itemCode: '', name: '', quantity: '', price: '', remarks: '' },
   ]);
 
-  // 会社・メーカーID とフォーム
+  // お客様・メーカーID とフォーム
   const [companyId, setCompanyId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [makerId, setMakerId] = useState('');
@@ -45,7 +45,7 @@ const OrderEntry = () => {
     setCustomAddress(deliveryOption === 'その他(備考欄)' ? '' : '納品先住所');
   }, [deliveryOption]);
 
-  // 会社名取得
+  // お客様名取得
   useEffect(() => {
     if (!companyId) {
       setCompanyName('');
@@ -183,16 +183,16 @@ const OrderEntry = () => {
         </div>
       )}
 
-      {/* 会社/メーカーID入力 */}
+      {/* お客様/メーカーID入力 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-white p-4 rounded shadow">
-        {/* 会社ID */}
+        {/* お客様ID */}
         <div>
-          <label className="block font-semibold mb-1">会社ID</label>
+          <label className="block font-semibold mb-1">お客様ID</label>
           <div className="flex space-x-2">
             <input
               type="text"
               className="flex-1 border rounded px-2 py-1 text-sm"
-              placeholder="会社ID"
+              placeholder="お客様ID"
               value={companyId}
               onChange={e => setCompanyId(e.target.value)}
             />
@@ -203,7 +203,7 @@ const OrderEntry = () => {
               Scan
             </button>
           </div>
-          {companyName && <p className="mt-1 text-gray-600 text-sm">会社名: {companyName}</p>}
+          {companyName && <p className="mt-1 text-gray-600 text-sm">お客様名: {companyName}</p>}
         </div>
         {/* メーカーID */}
         <div>
