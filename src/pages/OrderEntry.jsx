@@ -19,11 +19,13 @@ const OrderEntry = () => {
     { itemCode: '', name: '', quantity: '', price: '', remarks: '' },
   ]);
 
-  // 会社・メーカーID と各種フォーム
+  // 会社・メーカーID とフォーム
   const [companyId, setCompanyId] = useState('');
-  const [makerId, setMakerId] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [makerId, setMakerId] = useState('');
   const [makerName, setMakerName] = useState('');
+  const [makerLocked, setMakerLocked] = useState(false); // メーカー固定フラグ
+
   const [deliveryOption, setDeliveryOption] = useState('会社入れ');
   const [customAddress, setCustomAddress] = useState('納品先住所');
   const [takahashiContact, setTakahashiContact] = useState('');
@@ -37,12 +39,12 @@ const OrderEntry = () => {
   const [existingOrderId, setExistingOrderId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 納品先住所の初期化
+  // 納品先住所切り替え
   useEffect(() => {
     setCustomAddress(deliveryOption === 'その他(備考欄)' ? '' : '納品先住所');
   }, [deliveryOption]);
 
-  // 会社名フェッチ
+  // 会社名取得
   useEffect(() => {
     if (!companyId) {
       setCompanyName('');
@@ -53,7 +55,7 @@ const OrderEntry = () => {
       .catch(() => setCompanyName('取得失敗'));
   }, [companyId]);
 
-  // メーカー名フェッチ
+  // メーカー名取得
   useEffect(() => {
     if (!makerId) {
       setMakerName('');
@@ -94,17 +96,11 @@ const OrderEntry = () => {
     newOrders[idx][field] = value;
     setOrders(newOrders);
   };
-  const addRow = () => {
-    setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
-  };
-  const removeRow = idx => {
-    setOrders(orders.filter((_, i) => i !== idx));
-  };
+  const addRow = () => setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
+  const removeRow = idx => setOrders(orders.filter((_, i) => i !== idx));
 
   // フォーム検証
-  const isValid = Boolean(
-    companyId && makerId && orders.every(o => o.name && o.quantity && o.price)
-  );
+  const isValid = Boolean(companyId && makerId && orders.every(o => o.name && o.quantity && o.price));
 
   // 発注送信
   const handleSubmit = async () => {
@@ -116,8 +112,7 @@ const OrderEntry = () => {
       companyId,
       makerId,
       deliveryOption,
-      customAddress:
-        deliveryOption === 'その他(備考欄)' ? customAddress : '納品先住所',
+      customAddress: deliveryOption === 'その他(備考欄)' ? customAddress : '納品先住所',
       takahashiContact,
       personName,
       deliveryDate,
@@ -135,7 +130,10 @@ const OrderEntry = () => {
       // リセット
       setOrders([{ itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
       setCompanyId('');
-      setMakerId('');
+      if (!makerLocked) {
+        setMakerId('');
+        setMakerName('');
+      }
       setTakahashiContact('');
       setPersonName('');
       setDeliveryDate('');
@@ -191,20 +189,30 @@ const OrderEntry = () => {
         {/* メーカーID */}
         <div>
           <label className="block font-semibold mb-1">メーカーID</label>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-center">
             <input
               type="text"
               className="flex-1 border rounded px-2 py-1 text-sm"
               placeholder="メーカーID"
               value={makerId}
               onChange={e => setMakerId(e.target.value)}
+              disabled={makerLocked}
             />
             <button
-              onClick={() => setScanningFor('maker')}
+              onClick={() => !makerLocked && setScanningFor('maker')}
               className="bg-purple-500 text-white px-3 py-1 rounded text-sm"
+              disabled={makerLocked}
             >
               Scan
             </button>
+            <label className="flex items-center space-x-1 ml-2">
+              <input
+                type="checkbox"
+                checked={makerLocked}
+                onChange={e => setMakerLocked(e.target.checked)}
+              />
+              <span className="text-sm">メーカー固定</span>
+            </label>
           </div>
           {makerName && <p className="mt-1 text-gray-600 text-sm">メーカー名: {makerName}</p>}
         </div>
