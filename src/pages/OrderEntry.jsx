@@ -44,7 +44,7 @@ const OrderEntry = () => {
   const [existingOrderId, setExistingOrderId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 納品先住所の初期化／切り替え
+  // 納品先住所の切り替え
   useEffect(() => {
     setCustomAddress(
       deliveryOption === 'その他(備考欄)' ? '' : '納品先住所'
@@ -164,6 +164,8 @@ const OrderEntry = () => {
     maxWidth: '800px',
     margin: '0 auto',
     padding: '16px',
+    backgroundColor: '#fff',
+    color: '#000',           // テキストを黒に固定
   };
   const cardStyle = {
     background: '#fff',
@@ -171,17 +173,32 @@ const OrderEntry = () => {
     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
     padding: '16px',
     marginBottom: '16px',
+    color: '#000',           // テキストを黒に固定
   };
   const sectionStyle = {
     marginBottom: '16px',
     padding: '12px',
     background: '#f7f7f7',
     borderRadius: '4px',
+    color: '#000',           // テキストを黒に固定
+  };
+  const inputStyle = {
+    width: '100%',
+    padding: '8px',
+    borderRadius: '4px',
+    border: '1px solid #ccc',
+    backgroundColor: '#fff', // 背景を白に固定
+    color: '#000',           // テキストを黒に固定
+  };
+  const buttonStyle = {
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
   };
 
   return (
     <div style={containerStyle}>
-      {/* メインカード */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>
           展示会 発注登録{' '}
@@ -193,11 +210,9 @@ const OrderEntry = () => {
           <button
             onClick={handleAdminClick}
             style={{
-              padding: '8px 16px',
+              ...buttonStyle,
               background: '#10B981',
               color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
             }}
           >
             管理画面
@@ -209,10 +224,7 @@ const OrderEntry = () => {
           <div
             style={{
               position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              top: 0, left: 0, right: 0, bottom: 0,
               background: 'rgba(0,0,0,0.5)',
               display: 'flex',
               alignItems: 'center',
@@ -225,6 +237,7 @@ const OrderEntry = () => {
                 background: '#fff',
                 padding: '16px',
                 borderRadius: '4px',
+                color: '#000',
               }}
             >
               <QRCodeScanner
@@ -242,8 +255,7 @@ const OrderEntry = () => {
         )}
 
         {/* お客様／メーカー */}
-        <div style={{ ...sectionStyle, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          {/* お客様ID */}
+        <div style={{ ...sectionStyle, display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ flex: '1 1 200px' }}>
             <label style={{ fontWeight: '600' }}>お客様ID</label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -251,25 +263,26 @@ const OrderEntry = () => {
                 value={companyId}
                 onChange={(e) => setCompanyId(e.target.value)}
                 placeholder="お客様ID"
-                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               />
               <button
                 onClick={() => setScanningFor('company')}
                 style={{
-                  padding: '8px 12px',
+                  ...buttonStyle,
                   background: '#3B82F6',
                   color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
                 }}
               >
                 Scan
               </button>
             </div>
-            {companyName && <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {companyName}</div>}
+            {companyName && (
+              <div style={{ marginTop: '4px', color: '#6B7280' }}>
+                → {companyName}
+              </div>
+            )}
           </div>
 
-          {/* メーカーID */}
           <div style={{ flex: '1 1 200px' }}>
             <label style={{ fontWeight: '600' }}>メーカーID</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -278,17 +291,15 @@ const OrderEntry = () => {
                 onChange={(e) => setMakerId(e.target.value)}
                 disabled={makerLocked}
                 placeholder="メーカーID"
-                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               />
               <button
                 onClick={() => !makerLocked && setScanningFor('maker')}
                 disabled={makerLocked}
                 style={{
-                  padding: '8px 12px',
+                  ...buttonStyle,
                   background: '#A855F7',
                   color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
                 }}
               >
                 Scan
@@ -303,23 +314,29 @@ const OrderEntry = () => {
                 固定
               </label>
             </div>
-            {makerName && <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {makerName}</div>}
+            {makerName && (
+              <div style={{ marginTop: '4px', color: '#6B7280' }}>
+                → {makerName}
+              </div>
+            )}
           </div>
         </div>
 
         {/* 配送・担当者 */}
         <div style={sectionStyle}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-            {/* 納品方法 */}  
+            {/* 納品方法 */}
             <div style={{ flex: '1 1 200px' }}>
               <label style={{ fontWeight: '600' }}>納品方法</label>
               <select
                 value={deliveryOption}
                 onChange={(e) => setDeliveryOption(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               >
                 {['会社入れ', '現場入れ', '倉庫入れ', 'その他(備考欄)'].map((opt) => (
-                  <option key={opt}>{opt}</option>
+                  <option key={opt} style={{ color: '#000' }}>
+                    {opt}
+                  </option>
                 ))}
               </select>
             </div>
@@ -331,7 +348,7 @@ const OrderEntry = () => {
                 value={customAddress}
                 disabled={deliveryOption !== 'その他(備考欄)'}
                 onChange={(e) => setCustomAddress(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               />
             </div>
 
@@ -342,7 +359,7 @@ const OrderEntry = () => {
                 value={takahashiContact}
                 onChange={(e) => setTakahashiContact(e.target.value)}
                 placeholder="山田太郎"
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               />
             </div>
 
@@ -353,7 +370,7 @@ const OrderEntry = () => {
                 value={personName}
                 onChange={(e) => setPersonName(e.target.value)}
                 placeholder="担当者名"
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               />
             </div>
 
@@ -364,7 +381,7 @@ const OrderEntry = () => {
                 type="date"
                 value={deliveryDate}
                 onChange={(e) => setDeliveryDate(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={inputStyle}
               />
             </div>
           </div>
@@ -377,11 +394,9 @@ const OrderEntry = () => {
             <button
               onClick={addRow}
               style={{
-                padding: '6px 12px',
+                ...buttonStyle,
                 background: '#10B981',
                 color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
               }}
             >
               + 行追加
@@ -399,20 +414,24 @@ const OrderEntry = () => {
             >
               {['itemCode', 'name', 'quantity', 'price', 'remarks'].map((field, idx) => (
                 <div key={field} style={{ flex: idx < 2 ? '2 1 120px' : '1 1 80px' }}>
-                  <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '2px' }}>
+                  <label style={{ fontSize: '0.75rem', marginBottom: '2px', display: 'block' }}>
                     {['品番', '商品名', '数量', '単価', '備考'][idx]}
                   </label>
                   <input
                     type={idx === 2 || idx === 3 ? 'number' : 'text'}
                     value={[o.itemCode, o.name, o.quantity, o.price, o.remarks][idx]}
                     onChange={(e) => handleInputChange(i, field, e.target.value)}
-                    style={{ width: '100%', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                    style={inputStyle}
                   />
                 </div>
               ))}
               <button
                 onClick={() => removeRow(i)}
-                style={{ padding: '6px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: '4px' }}
+                style={{
+                  ...buttonStyle,
+                  background: '#EF4444',
+                  color: '#fff',
+                }}
               >
                 削除
               </button>
@@ -426,12 +445,9 @@ const OrderEntry = () => {
             onClick={handleSubmit}
             disabled={!isValid}
             style={{
-              padding: '10px 20px',
+              ...buttonStyle,
               background: isValid ? '#3B82F6' : '#D1D5DB',
               color: isValid ? '#fff' : '#6B7280',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isValid ? 'pointer' : 'not-allowed',
             }}
           >
             {isEditing ? '更新' : '登録'}
