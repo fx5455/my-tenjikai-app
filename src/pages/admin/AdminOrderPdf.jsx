@@ -86,17 +86,6 @@ const AdminOrderPdf = () => {
       <html>
       <head><title>${titleText}</title><style>
         @page { size: A4; margin: 20mm; }
-        @media print {
-          body { counter-reset: page; }
-          
-         /* ページ番号と総ページ数を表示 */
-footer::after {
-content: "ページ " counter(page) " / " counter(pages);
-display: block;
-text-align: center;
-margin-top: 4mm;
- }
-        }
         body { margin:0; padding:0; font-family:Arial,sans-serif; }
         .printContainer { width:170mm; margin:0 auto; padding:10mm; box-sizing:border-box; }
         .header-main { text-align:center; font-size:24px; font-weight:bold; margin-bottom:6mm; }
@@ -108,7 +97,6 @@ margin-top: 4mm;
         .summary-box { display:flex; justify-content:flex-end; align-items:center; margin-top:10mm; }
         .summary-box .label { background:#333; color:#fff; padding:4px 12px; font-weight:bold; }
         .summary-box .amount { border:1px solid #333; padding:4px 12px; margin-left:2px; font-size:16px; }
-        footer { position:fixed; bottom:10mm; left:0; right:0; text-align:center; font-size:12px; }
       </style></head>
       <body>
         <div class="printContainer">
@@ -127,7 +115,6 @@ margin-top: 4mm;
             <div class="amount">${totalAmount.toLocaleString()} 円（税込）</div>
           </div>
         </div>
-        <footer></footer>
       </body>
       </html>
     `);
