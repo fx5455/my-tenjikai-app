@@ -1,5 +1,6 @@
+// src/pages/OrderEntry.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';  // ← 追加
+import { useNavigate } from 'react-router-dom';  // ← 追加
 import {
   collection,
   addDoc,
@@ -15,6 +16,19 @@ import { db } from '../firebase';
 import QRCodeScanner from '../components/QRCodeScanner';
 
 const OrderEntry = () => {
+  const navigate = useNavigate();  // ナビゲート用フック
+
+  // 管理画面リンク用パスワードチェック
+  const handleAdminClick = (e) => {
+    e.preventDefault();
+    const input = window.prompt('管理画面のパスワードを入力してください');
+    if (input === '1234') {
+      navigate('/admin/orders/pdf');
+    } else {
+      alert('パスワードが違います');
+    }
+  };
+
   // 明細データ
   const [orders, setOrders] = useState([
     { itemCode: '', name: '', quantity: '', price: '', remarks: '' },
@@ -25,7 +39,7 @@ const OrderEntry = () => {
   const [companyName, setCompanyName] = useState('');
   const [makerId, setMakerId] = useState('');
   const [makerName, setMakerName] = useState('');
-  const [makerLocked, setMakerLocked] = useState(false); // メーカー固定フラグ
+  const [makerLocked, setMakerLocked] = useState(false);
 
   const [deliveryOption, setDeliveryOption] = useState('会社入れ');
   const [customAddress, setCustomAddress] = useState('納品先住所');
@@ -97,7 +111,8 @@ const OrderEntry = () => {
     newOrders[idx][field] = value;
     setOrders(newOrders);
   };
-  const addRow = () => setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
+  const addRow = () =>
+    setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
   const removeRow = idx => setOrders(orders.filter((_, i) => i !== idx));
 
   // フォーム検証
@@ -152,22 +167,15 @@ const OrderEntry = () => {
       {isEditing && <p className="text-blue-600">※ 編集モード</p>}
 
       {/* 一覧リンク */}
-<div className="flex space-x-3 justify-end">
-  {/* メーカー別一覧 */}
-  <Link
-    to={`/maker-orders/${makerId || ''}`}
-    className="px-4 py-2 rounded text-white bg-indigo-600"
-  >
-    メーカー別発注一覧を見る
-  </Link>
-  {/* 管理画面PDF */}
-  <Link
-    to="/admin/orders/pdf"
-    className="px-4 py-2 bg-green-600 text-white rounded"
-  >
-    管理画面PDF
-  </Link>
-</div>
+      <div className="flex space-x-3 justify-end">
+        {/* 管理画面（パスワード保護） */}
+        <button
+          onClick={handleAdminClick}
+          className="px-4 py-2 bg-green-600 text-white rounded"
+        >
+          管理画面
+        </button>
+      </div>
 
       {/* QRスキャンオーバーレイ */}
       {scanningFor && (
@@ -246,7 +254,7 @@ const OrderEntry = () => {
             value={deliveryOption}
             onChange={e => setDeliveryOption(e.target.value)}
           >
-            {['会社入れ','現場入れ','倉庫入れ','その他(備考欄)'].map(opt => (
+            {['会社入れ', '現場入れ', '倉庫入れ', 'その他(備考欄)'].map(opt => (
               <option key={opt}>{opt}</option>
             ))}
           </select>
@@ -306,13 +314,19 @@ const OrderEntry = () => {
               key={i}
               className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-end"
             >
-              {['品番','商品名','数量','単価','備考'].map((label, idx) => (
+              {['品番', '商品名', '数量', '単価', '備考'].map((label, idx) => (
                 <div key={label} className="flex flex-col">
                   <label className="text-xs text-gray-500">{label}</label>
                   <input
-                    type={idx>=2 && idx<=3 ? 'number' : 'text'}
-                    value={[o.itemCode,o.name,o.quantity,o.price,o.remarks][idx]}
-                    onChange={e => handleInputChange(i,['itemCode','name','quantity','price','remarks'][idx],e.target.value)}
+                    type={idx >= 2 && idx <= 3 ? 'number' : 'text'}
+                    value={[o.itemCode, o.name, o.quantity, o.price, o.remarks][idx]}
+                    onChange={e =>
+                      handleInputChange(
+                        i,
+                        ['itemCode', 'name', 'quantity', 'price', 'remarks'][idx],
+                        e.target.value
+                      )
+                    }
                     className="border rounded px-2 py-1 text-sm"
                   />
                 </div>
@@ -333,7 +347,11 @@ const OrderEntry = () => {
         <button
           onClick={handleSubmit}
           disabled={!isValid}
-          className={`px-6 py-2 rounded text-sm ${isValid ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+          className={`px-6 py-2 rounded text-sm ${
+            isValid
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+          }`}
         >
           {isEditing ? '更新' : '登録'}
         </button>
