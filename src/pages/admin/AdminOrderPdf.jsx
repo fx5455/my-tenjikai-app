@@ -12,7 +12,6 @@ const AdminOrderPdf = () => {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [makers, setMakers] = useState([]);
   const [companies, setCompanies] = useState([]);
-  const [scanningFor, setScanningFor] = useState(null);
   const [searchCompanyName, setSearchCompanyName] = useState('');
   const [searchMakerName, setSearchMakerName] = useState('');
   const [filteredCompanies, setFilteredCompanies] = useState([]);
@@ -20,7 +19,7 @@ const AdminOrderPdf = () => {
   const [showSummary, setShowSummary] = useState(false);
   const printRef = useRef(null);
 
-  // 一度にデータ取得
+  // 初期データ取得
   useEffect(() => {
     (async () => {
       const [ms, cs, os] = await Promise.all([
@@ -34,40 +33,42 @@ const AdminOrderPdf = () => {
     })();
   }, []);
 
-  // 検索・リセット等は省略（既存コードそのまま）
+  // 検索・リセット
   const handleCompanySearch = () => setFilteredCompanies(
-    companies.filter(c => c.name.toLowerCase().includes(searchCompanyName.toLowerCase())));
+    companies.filter(c => c.name.includes(searchCompanyName))
+  );
   const handleMakerSearch = () => setFilteredMakers(
-    makers.filter(m => m.name.toLowerCase().includes(searchMakerName.toLowerCase())));
+    makers.filter(m => m.name.includes(searchMakerName))
+  );
   const handleReset = () => {
-    setSearchCompanyName(''); setSearchMakerName('');
-    setFilteredCompanies([]); setFilteredMakers([]);
-    setSelectedGroup(''); setScanningFor(null);
+    setSearchCompanyName('');
+    setSearchMakerName('');
+    setFilteredCompanies([]);
+    setFilteredMakers([]);
+    setSelectedGroup('');
   };
-  const filteredOrders = orders.filter(o => selectedGroup
-    ? (mode === 'maker' ? o.makerId === selectedGroup : o.companyId === selectedGroup)
-    : true
+
+  // 絞り込み
+  const filteredOrders = orders.filter(o =>
+    selectedGroup
+      ? (mode === 'maker' ? o.makerId === selectedGroup : o.companyId === selectedGroup)
+      : true
   );
 
-  // 集計
+  // 集計データ
   const summaryData = (mode === 'maker'
-    ? makers.map(m => {
-        const total = orders.filter(o => o.makerId === m.id)
-          .flatMap(o => o.items)
-          .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
-        return { id: m.id, name: m.name, total };
-      })
-    : companies.map(c => {
-        const total = orders.filter(o => o.companyId === c.id)
-          .flatMap(o => o.items)
-          .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
-        return { id: c.id, name: c.name, total };
-      })
-  ).filter(s => s.total > 0);
+    ? makers : companies
+  ).map(g => {
+    const total = orders.filter(o =>
+      mode === 'maker' ? o.makerId === g.id : o.companyId === g.id
+    ).flatMap(o => o.items)
+     .reduce((sum, item) => sum + item.quantity * item.price, 0);
+    return { ...g, total };
+  }).filter(s => s.total > 0);
 
-  // 印刷合計
+  // 印刷用合計
   const totalAmount = filteredOrders.flatMap(o => o.items)
-    .reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
+    .reduce((sum, item) => sum + item.quantity * item.price, 0);
 
   // 印刷
   const handlePrint = () => {
@@ -129,99 +130,100 @@ const AdminOrderPdf = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* 戻るボタン */}
-      <Link to="/" className="inline-block mb-4 text-blue-600 hover:underline">
-        ← 発注登録に戻る
-      </Link>
+    <div className="p-6 space-y-6">
+      {/* ナビゲーション */}
+      <div className="flex items-center justify-between">
+        <Link to="/" className="text-blue-600 hover:underline">
+          &larr; 発注登録に戻る
+        </Link>
+        <div className="space-x-2">
+          <button
+            onClick={() => setShowSummary(prev => !prev)}
+            className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700"
+          >
+            {showSummary ? '集計を隠す' : '集計を表示'}
+          </button>
+          {filteredOrders.length > 0 && (
+            <button
+              onClick={handlePrint}
+              className="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600"
+            >
+              <FaPrint className="inline-block mr-1" /> 印刷
+            </button>
+          )}
+        </div>
+      </div>
 
-      {/* 集計トグル */}
-      <button
-        onClick={() => setShowSummary(prev => !prev)}
-        className="bg-green-600 text-white px-3 py-1 rounded mb-4"
-      >
-        集計を{showSummary ? '非表示' : '表示'}
-      </button>
-
-      {/* 集計内容（ヘッダー付きに戻す） */}
+      {/* 集計内容 */}
       {showSummary && (
-        <div className="mb-6">
-          <h3 className="font-semibold mb-2">
-            {mode === 'maker'
-              ? 'メーカー別集計（合計金額）'
-              : 'お客様別集計（合計金額）'}
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-lg font-semibold mb-3">
+            {mode === 'maker' ? 'メーカー別集計' : 'お客様別集計'}（合計金額）
           </h3>
-          <ul className="list-disc ml-4">
+          <ul className="list-inside list-disc space-y-1">
             {summaryData.map(s => (
               <li key={s.id}>
-                {s.name}：合計{s.total.toLocaleString()}円
+                {s.name}：{s.total.toLocaleString()}円
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* モード切替 */}
-      <div className="space-x-2 mb-4">
-        <button
-          onClick={() => { setMode('maker'); handleReset(); }}
-          className={`px-3 py-1 rounded ${mode==='maker'? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-        >
-          メーカー別
-        </button>
-        <button
-          onClick={() => { setMode('company'); handleReset(); }}
-          className={`px-3 py-1 rounded ${mode==='company'? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-        >
-          お客様別
-        </button>
-      </div>
+      {/* モード切替＆検索 */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => { setMode('maker'); handleReset(); }}
+            className={`px-4 py-2 rounded ${mode === 'maker' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            メーカー別
+          </button>
+          <button
+            onClick={() => { setMode('company'); handleReset(); }}
+            className={`px-4 py-2 rounded ${mode === 'company' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            お客様別
+          </button>
+        </div>
 
-      {/* 検索・選択・リセット (QR無し) */}
-      <div className="flex items-center space-x-2 mb-4">
-        <input
-          type="text"
-          placeholder={mode==='maker'? 'メーカー名検索' : 'お客様名検索'}
-          value={mode==='maker'? searchMakerName : searchCompanyName}
-          onChange={e => mode==='maker'? setSearchMakerName(e.target.value) : setSearchCompanyName(e.target.value)}
-          className="border p-1"
-        />
-        <button
-          onClick={mode==='maker'? handleMakerSearch : handleCompanySearch}
-          className={`px-3 py-1 rounded ${mode==='maker'? 'bg-purple-600 text-white':'bg-blue-600 text-white'}`}
-        >
-          <FaSearch /> 検索
-        </button>
-        <select
-          value={selectedGroup}
-          onChange={e => setSelectedGroup(e.target.value)}
-          className="border p-1"
-        >
-          <option value="">--{mode==='maker'? 'メーカー' : 'お客様'}を選択--</option>
-          {( (mode==='maker' ? (filteredMakers.length ? filteredMakers : makers) : (filteredCompanies.length ? filteredCompanies : companies)) ).map(g => (
-            <option key={g.id} value={g.id}>{g.name}</option>
-          ))}
-        </select>
-        <button
-          onClick={handleReset}
-          className="bg-gray-500 text-white px-3 py-1 rounded"
-        >
-          <FaUndo /> リセット
-        </button>
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            placeholder={mode === 'maker' ? 'メーカー名検索' : 'お客様名検索'}
+            value={mode === 'maker' ? searchMakerName : searchCompanyName}
+            onChange={e => mode === 'maker' ? setSearchMakerName(e.target.value) : setSearchCompanyName(e.target.value)}
+            className="border p-2 rounded w-48"
+          />
+          <button
+            onClick={mode === 'maker' ? handleMakerSearch : handleCompanySearch}
+            className="bg-blue-600 text-white px-3 py-2 rounded"
+          >
+            <FaSearch />
+          </button>
+          <select
+            value={selectedGroup}
+            onChange={e => setSelectedGroup(e.target.value)}
+            className="border p-2 rounded"
+          >
+            <option value="">--{mode === 'maker' ? 'メーカー' : 'お客様'}を選択--</option>
+            {(mode === 'maker' ? (filteredMakers.length ? filteredMakers : makers)
+                : (filteredCompanies.length ? filteredCompanies : companies))
+              .map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+          </select>
+          <button
+            onClick={handleReset}
+            className="bg-gray-500 text-white px-3 py-2 rounded"
+          >
+            <FaUndo />
+          </button>
+        </div>
       </div>
-
-      {/* 印刷ボタン */}
-      {filteredOrders.length > 0 && (
-        <button
-          onClick={handlePrint}
-          className="bg-yellow-500 text-white px-3 py-1 rounded mb-4 no-print"
-        >
-          <FaPrint /> 印刷
-        </button>
-      )}
 
       {/* 印刷対象 */}
-      <div ref={printRef} className="mt-4 space-y-4">
+      <div ref={printRef} className="mt-6 space-y-4">
         {filteredOrders.map(order => (
           <div key={order.id} className="order-item">
             <p>発注日: {order.timestamp?.toDate().toLocaleString()}</p>
