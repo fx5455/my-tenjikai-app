@@ -47,7 +47,7 @@ const OrderEntry = () => {
   // 納品先住所の切り替え
   useEffect(() => {
     setCustomAddress(
-      deliveryOption === 'その他(備考欄)' ? '' : '納品先住所'
+      deliveryOption === 'その他' ? '' : '納品先住所'
     );
   }, [deliveryOption]);
 
@@ -333,7 +333,7 @@ const OrderEntry = () => {
                 onChange={(e) => setDeliveryOption(e.target.value)}
                 style={inputStyle}
               >
-                {['会社入れ', '現場入れ', '倉庫入れ', 'その他(備考欄)'].map((opt) => (
+                {['会社入れ', '現場入れ', '倉庫入れ', 'その他'].map((opt) => (
                   <option key={opt} style={{ color: '#000' }}>
                     {opt}
                   </option>
@@ -346,7 +346,7 @@ const OrderEntry = () => {
               <label style={{ fontWeight: '600' }}>納品先住所</label>
               <input
                 value={customAddress}
-                disabled={deliveryOption !== 'その他(備考欄)'}
+                disabled={deliveryOption !== 'その他'}
                 onChange={(e) => setCustomAddress(e.target.value)}
                 style={inputStyle}
               />
