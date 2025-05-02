@@ -1,5 +1,6 @@
 // src/pages/admin/AdminOrderPdf.jsx
 import React, { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';  // 追加
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import QRCodeScanner from '../../components/QRCodeScanner';
@@ -156,6 +157,16 @@ const AdminOrderPdf = () => {
 
   return (
     <div className="p-6">
+    {/* ← 発注登録画面に戻るボタン */}
+    <div className="mb-4">
+      <Link
+        to="/"
+        className="inline-flex items-center px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+      >
+        ← 発注登録に戻る
+      </Link>
+    </div>
+
       {/* 集計の表示切替ボタン */}
       <button
         onClick={() => setShowSummary(prev => !prev)}
