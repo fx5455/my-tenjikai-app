@@ -318,12 +318,119 @@ const OrderEntry = () => {
 
         {/* 配送・担当者 */}
         <div style={sectionStyle}>
-          {/* （省略）残りの配送・担当者フォームも既存コードのまま配置してください */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            {/* 納品方法 */}
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>納品方法</label>
+              <select
+                value={deliveryOption}
+                onChange={(e) => setDeliveryOption(e.target.value)}
+                style={inputStyle}
+              >
+                {['会社入れ', '現場入れ', '倉庫入れ', 'その他'].map((opt) => (
+                  <option key={opt} style={{ color: '#000' }}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 納品先住所 */}
+            <div style={{ flex: '2 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>納品先住所</label>
+              <input
+                value={customAddress}
+                disabled={deliveryOption !== 'その他'}
+                onChange={(e) => setCustomAddress(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            {/* 高橋本社担当 */}
+            <div style={{ flex: '1 1 200px' }}>
+            <label style={{ fontWeight: '600' }}>高橋本社担当</label>
+              <input
+                value={takahashiContact}
+                onChange={(e) => setTakahashiContact(e.target.value)}
+                placeholder="山田太郎"
+                style={inputStyle}
+              />
+            </div>
+
+            {/* 顧客担当 */}
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>顧客担当</label>
+              <input
+                value={personName}
+                onChange={(e) => setPersonName(e.target.value)}
+                placeholder="担当者名"
+                style={inputStyle}
+              />
+            </div>
+
+            {/* 納品希望日 */}
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontWeight: '600' }}>納品希望日</label>
+              <input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+          </div>
         </div>
 
         {/* 明細 */}
         <div style={sectionStyle}>
-          {/* （省略）既存の明細テーブル部分もそのまま配置してください */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <h3 style={{ fontWeight: '600' }}>明細</h3>
+            <button
+              onClick={addRow}
+              style={{
+                ...buttonStyle,
+                background: '#10B981',
+                color: '#fff',
+              }}
+            >
+              + 行追加
+            </button>
+          </div>
+          {orders.map((o, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'flex-end',
+                marginBottom: '8px',
+              }}
+            >
+              {['itemCode', 'name', 'quantity', 'price', 'remarks'].map((field, idx) => (
+                <div key={field} style={{ flex: idx < 2 ? '2 1 120px' : '1 1 80px' }}>
+                  <label style={{ fontSize: '0.75rem', marginBottom: '2px', display: 'block' }}>
+                    {['品番', '商品名', '数量', '単価', '備考'][idx]}
+                  </label>
+                  <input
+                    type={idx === 2 || idx === 3 ? 'number' : 'text'}
+                    value={[o.itemCode, o.name, o.quantity, o.price, o.remarks][idx]}
+                    onChange={(e) => handleInputChange(i, field, e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+              <button
+                onClick={() => removeRow(i)}
+                style={{
+                  ...buttonStyle,
+                  background: '#EF4444',
+                  color: '#fff',
+                }}
+              >
+                削除
+              </button>
+            </div>
+          ))}
         </div>
 
         {/* 登録ボタン */}
