@@ -245,17 +245,16 @@ const OrderEntry = () => {
           </button>
         </div>
         {/* スキャンモーダル */}
-        {scanningFor && (
-          <div style={modalStyle}>
-            <div style={scannerContainerStyle}>
-              <QRCodeScanner
-                onScan={data => {
-                  const id = data.text || data;
-                  scanningFor === 'company' ? handleCompanyScan(id) : handleMakerScan(id);
-                }}
-                onCancel={() => setScanningFor(null)}
-              />
-            </div>
+        +        {scanningFor && (
+          <div style={st.modal}>
+           <div style={st.scanBox}>
+             <QRCodeScanner
+               mode={scanningFor}
+               setCompanyId={handleCompanyScan}
+              setMakerId={handleMakerScan}
+              onCancel={() => setScanningFor(null)}
+             />
+                        </div>
           </div>
         )}
         {/* お客様／メーカー入力 */}
