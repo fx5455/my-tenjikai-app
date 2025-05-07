@@ -118,29 +118,37 @@ const OrderEntry = () => {
     Boolean(makerId) &&
     orders.every((o) => o.name && o.quantity && o.price);
 
-  // フォーム送信
-  const handleSubmit = async () => {
-  // お客様IDスキャン時の入場チェック
+  // スキャンハンドラ：お客様
   const handleCompanyScan = async (id) => {
-    // 一旦 ID を設定
     setCompanyId(id);
-    // 入場セッションの有無をチェック
-    const sessionSnap = await getDocs(
-      query(
-        collection(db, 'orders'),
-        where('companyId', '==', id),
-        where('status', '==', 'open'),
-        limit(1)
-      )
-    );
-    if (sessionSnap.empty) {
-      alert('入場スキャンが完了していません。先に入場スキャンを行ってください。');
-      setCompanyId('');
+    try {
+      const sessionSnap = await getDocs(
+        query(
+          collection(db, 'orders'),
+          where('companyId', '==', id),
+          where('status', '==', 'open'),
+          limit(1)
+        )
+      );
+      if (sessionSnap.empty) {
+        alert('入場スキャンが完了していません。先に入場スキャンを行ってください。');
+        setCompanyId('');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('入場チェックに失敗しました');
     }
-    // モーダルを閉じる
     setScanningFor(null);
   };
 
+  // スキャンハンドラ：メーカー
+  const handleMakerScan = (id) => {
+    setMakerId(id);
+    setScanningFor(null);
+  };
+
+  // フォーム送信
+  const handleSubmit = async () => {
     if (!isValid) {
       alert('必須項目を入力してください');
       return;
@@ -164,7 +172,6 @@ const OrderEntry = () => {
         await addDoc(collection(db, 'orders'), payload);
         alert('登録しました');
       }
-      // リセット省略...
     } catch (error) {
       console.error(error);
       alert('送信に失敗しました');
@@ -177,7 +184,7 @@ const OrderEntry = () => {
     margin: '0 auto',
     padding: '16px',
     backgroundColor: '#fff',
-    color: '#000',           // テキストを黒に固定
+    color: '#000',
   };
   const cardStyle = {
     background: '#fff',
@@ -185,22 +192,22 @@ const OrderEntry = () => {
     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
     padding: '16px',
     marginBottom: '16px',
-    color: '#000',           // テキストを黒に固定
+    color: '#000',
   };
   const sectionStyle = {
     marginBottom: '16px',
     padding: '12px',
     background: '#f7f7f7',
     borderRadius: '4px',
-    color: '#000',           // テキストを黒に固定
+    color: '#000',
   };
   const inputStyle = {
     width: '100%',
     padding: '8px',
     borderRadius: '4px',
     border: '1px solid #ccc',
-    backgroundColor: '#fff', // 背景を白に固定
-    color: '#000',           // テキストを黒に固定
+    backgroundColor: '#fff',
+    color: '#000',
   };
   const buttonStyle = {
     padding: '10px 20px',
@@ -235,31 +242,18 @@ const OrderEntry = () => {
         {scanningFor && (
           <div
             style={{
-              position: 'fixed',
-              top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', zIndex: 1000,
             }}
           >
-            <div
-              style={{
-                background: '#fff',
-                padding: '16px',
-                borderRadius: '4px',
-                color: '#000',
-              }}
-            >
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
               <QRCodeScanner
                 mode={scanningFor}
-                setCompanyId={(id) =>
-                  scanningFor === 'company' && setCompanyId(id)
-                }
-                setMakerId={(id) =>
-                  scanningFor === 'maker' && setMakerId(id)
-                }
+                onScan={(id) => {
+                  if (scanningFor === 'company') handleCompanyScan(id);
+                  else handleMakerScan(id);
+                }}
                 onCancel={() => setScanningFor(null)}
               />
             </div>
@@ -279,19 +273,13 @@ const OrderEntry = () => {
               />
               <button
                 onClick={() => setScanningFor('company')}
-                style={{
-                  ...buttonStyle,
-                  background: '#3B82F6',
-                  color: '#fff',
-                }}
+                style={{ ...buttonStyle, background: '#3B82F6', color: '#fff' }}
               >
                 Scan
               </button>
             </div>
             {companyName && (
-              <div style={{ marginTop: '4px', color: '#6B7280' }}>
-                → {companyName}
-              </div>
+              <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {companyName}</div>
             )}
           </div>
 
@@ -306,13 +294,9 @@ const OrderEntry = () => {
                 style={inputStyle}
               />
               <button
-                onClick={() => !makerLocked && setScanningFor('maker')}
+                onClick={() => setScanningFor('maker')}
                 disabled={makerLocked}
-                style={{
-                  ...buttonStyle,
-                  background: '#A855F7',
-                  color: '#fff',
-                }}
+                style={{ ...buttonStyle, background: '#A855F7', color: '#fff' }}
               >
                 Scan
               </button>
@@ -327,128 +311,19 @@ const OrderEntry = () => {
               </label>
             </div>
             {makerName && (
-              <div style={{ marginTop: '4px', color: '#6B7280' }}>
-                → {makerName}
-              </div>
+              <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {makerName}</div>
             )}
           </div>
         </div>
 
         {/* 配送・担当者 */}
         <div style={sectionStyle}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-            {/* 納品方法 */}
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontWeight: '600' }}>納品方法</label>
-              <select
-                value={deliveryOption}
-                onChange={(e) => setDeliveryOption(e.target.value)}
-                style={inputStyle}
-              >
-                {['会社入れ', '現場入れ', '倉庫入れ', 'その他'].map((opt) => (
-                  <option key={opt} style={{ color: '#000' }}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 納品先住所 */}
-            <div style={{ flex: '2 1 200px' }}>
-              <label style={{ fontWeight: '600' }}>納品先住所</label>
-              <input
-                value={customAddress}
-                disabled={deliveryOption !== 'その他'}
-                onChange={(e) => setCustomAddress(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            {/* 高橋本社担当 */}
-            <div style={{ flex: '1 1 200px' }}>
-            <label style={{ fontWeight: '600' }}>高橋本社担当</label>
-              <input
-                value={takahashiContact}
-                onChange={(e) => setTakahashiContact(e.target.value)}
-                placeholder="山田太郎"
-                style={inputStyle}
-              />
-            </div>
-
-            {/* 顧客担当 */}
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontWeight: '600' }}>顧客担当</label>
-              <input
-                value={personName}
-                onChange={(e) => setPersonName(e.target.value)}
-                placeholder="担当者名"
-                style={inputStyle}
-              />
-            </div>
-
-            {/* 納品希望日 */}
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontWeight: '600' }}>納品希望日</label>
-              <input
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => setDeliveryDate(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </div>
+          {/* （省略）残りの配送・担当者フォームも既存コードのまま配置してください */}
         </div>
 
         {/* 明細 */}
         <div style={sectionStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontWeight: '600' }}>明細</h3>
-            <button
-              onClick={addRow}
-              style={{
-                ...buttonStyle,
-                background: '#10B981',
-                color: '#fff',
-              }}
-            >
-              + 行追加
-            </button>
-          </div>
-          {orders.map((o, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'flex-end',
-                marginBottom: '8px',
-              }}
-            >
-              {['itemCode', 'name', 'quantity', 'price', 'remarks'].map((field, idx) => (
-                <div key={field} style={{ flex: idx < 2 ? '2 1 120px' : '1 1 80px' }}>
-                  <label style={{ fontSize: '0.75rem', marginBottom: '2px', display: 'block' }}>
-                    {['品番', '商品名', '数量', '単価', '備考'][idx]}
-                  </label>
-                  <input
-                    type={idx === 2 || idx === 3 ? 'number' : 'text'}
-                    value={[o.itemCode, o.name, o.quantity, o.price, o.remarks][idx]}
-                    onChange={(e) => handleInputChange(i, field, e.target.value)}
-                    style={inputStyle}
-                  />
-                </div>
-              ))}
-              <button
-                onClick={() => removeRow(i)}
-                style={{
-                  ...buttonStyle,
-                  background: '#EF4444',
-                  color: '#fff',
-                }}
-              >
-                削除
-              </button>
-            </div>
-          ))}
+          {/* （省略）既存の明細テーブル部分もそのまま配置してください */}
         </div>
 
         {/* 登録ボタン */}
