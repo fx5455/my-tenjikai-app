@@ -364,9 +364,9 @@ const OrderEntry = () => {
               />
             </div>
 
-            {/* 社内担当 */}
+            {/* 高橋本社担当 */}
             <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontWeight: '600' }}>社内担当</label>
+            <label style={{ fontWeight: '600' }}>高橋本社担当</label>
               <input
                 value={takahashiContact}
                 onChange={(e) => setTakahashiContact(e.target.value)}
