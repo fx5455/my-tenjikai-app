@@ -1,4 +1,3 @@
-// src/pages/admin/AdminOrderPdf.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
@@ -123,6 +122,8 @@ const AdminOrderPdf = () => {
   };
 
   // インラインスタイル定義
+  const navStyle = { marginBottom: '16px', display: 'flex', gap: '16px' };
+  const linkStyle = { color: '#2563EB', textDecoration: 'none' };
   const containerStyle = {
     maxWidth: '800px',
     margin: '0 auto',
@@ -161,135 +162,141 @@ const AdminOrderPdf = () => {
   };
 
   return (
-    <div style={containerStyle}>
-      {/* ナビゲーション */}
-      <div style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link to="/" style={{ color: '#2563EB', textDecoration: 'none' }}>
-          &larr; 発注登録に戻る
-        </Link>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setShowSummary(prev => !prev)}
-            style={{
-              ...buttonBase,
-              background: '#10B981',
-            }}
-          >
-            {showSummary ? '集計を隠す' : '集計を表示'}
-          </button>
-          {filteredOrders.length > 0 && (
+    <>
+      {/* Global Navigation */}
+      <nav style={navStyle}>
+        <Link to="/admin/entry" style={linkStyle}>入場スキャン</Link>
+        <Link to="/admin/exit" style={linkStyle}>退場スキャン</Link>
+        <Link to="/admin/orders" style={linkStyle}>&#8212; 発注一覧</Link>
+      </nav>
+      <div style={containerStyle}>
+        {/* Existing Navigation & Controls */}
+        <div style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div />
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={handlePrint}
+              onClick={() => setShowSummary(prev => !prev)}
               style={{
                 ...buttonBase,
-                background: '#FBBF24',
-                color: '#000',
+                background: '#10B981',
               }}
             >
-              <FaPrint style={{ marginRight: '4px' }} />
-              印刷
+              {showSummary ? '集計を隠す' : '集計を表示'}
             </button>
-          )}
+            {filteredOrders.length > 0 && (
+              <button
+                onClick={handlePrint}
+                style={{
+                  ...buttonBase,
+                  background: '#FBBF24',
+                  color: '#000',
+                }}
+              >
+                <FaPrint style={{ marginRight: '4px' }} />
+                印刷
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* 集計 */}
-      {showSummary && (
-        <div style={cardStyle}>
-          <h3 style={{ marginBottom: '8px' }}>
-            {mode === 'maker' ? 'メーカー別集計' : 'お客様別集計'}（合計金額）
-          </h3>
-          <ul style={{ paddingLeft: '16px', color: '#000' }}>
-            {summaryData.map(s => (
-              <li key={s.id}>
-                {s.name}：{s.total.toLocaleString()}円
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* モード切替＆検索 */}
-      <div style={{ ...cardStyle, display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['maker', 'company'].map(m => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); handleReset(); }}
-              style={{
-                ...buttonBase,
-                background: mode === m ? '#3B82F6' : '#9CA3AF',
-              }}
-            >
-              {m === 'maker' ? 'メーカー別' : 'お客様別'}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder={mode === 'maker' ? 'メーカー名検索' : 'お客様名検索'}
-            value={mode === 'maker' ? searchMakerName : searchCompanyName}
-            onChange={e => mode === 'maker' ? setSearchMakerName(e.target.value) : setSearchCompanyName(e.target.value)}
-            style={{ ...inputStyle, width: '160px' }}
-          />
-          <button
-            onClick={mode === 'maker' ? handleMakerSearch : handleCompanySearch}
-            style={{ ...buttonBase, background: '#3B82F6' }}
-          >
-            <FaSearch />
-          </button>
-          <select
-            value={selectedGroup}
-            onChange={e => setSelectedGroup(e.target.value)}
-            style={{ ...inputStyle, width: '180px' }}
-          >
-            <option value="">
-              --{mode === 'maker' ? 'メーカー' : 'お客様'}を選択--
-            </option>
-            {(mode === 'maker' ? (filteredMakers.length ? filteredMakers : makers) : (filteredCompanies.length ? filteredCompanies : companies))
-              .map(g => (
-                <option key={g.id} value={g.id} style={{ color: '#000' }}>
-                  {g.name}
-                </option>
+        {/* 集計 */}
+        {showSummary && (
+          <div style={cardStyle}>
+            <h3 style={{ marginBottom: '8px' }}>
+              {mode === 'maker' ? 'メーカー別集計' : 'お客様別集計'}（合計金額）
+            </h3>
+            <ul style={{ paddingLeft: '16px', color: '#000' }}>
+              {summaryData.map(s => (
+                <li key={s.id}>
+                  {s.name}：{s.total.toLocaleString()}円
+                </li>
               ))}
-          </select>
-          <button
-            onClick={handleReset}
-            style={{ ...buttonBase, background: '#6B7280' }}
-          >
-            <FaUndo />
-          </button>
-        </div>
-      </div>
-
-      {/* 印刷対象 */}
-      <div ref={printRef} style={{ ...cardStyle }}>
-        {filteredOrders.map(order => (
-          <div key={order.id} style={{ marginBottom: '16px', borderBottom: '1px solid #000', paddingBottom: '8px' }}>
-            <p>発注日: {order.timestamp?.toDate().toLocaleString()}</p>
-            <p>納品方法: {order.deliveryOption}</p>
-            <p>納品先住所: {order.customAddress}</p>
-            <p>お客様担当者: {order.personName || '未入力'}</p>
-            <p>高橋本社担当者: {order.takahashiContact || '未入力'}</p>
-            <p>納品希望日: {order.deliveryDate}</p>
-            <ul style={{ paddingLeft: '16px' }}>
-              {order.items.map((item, idx) => {
-                const cname = companies.find(c => c.id === order.companyId)?.name || '';
-                const mname = makers.find(m => m.id === order.makerId)?.name || '';
-                return (
-                  <li key={idx} style={{ margin: '4px 0' }}>
-                    {mode === 'company'
-                      ? `${mname} / ${item.itemCode} / ${item.name}：${item.quantity}個 × ${item.price}円 (備考: ${item.remarks || 'なし'})`
-                      : `${cname} / ${item.itemCode} / ${item.name}：${item.quantity}個 × ${item.price}円 (備考: ${item.remarks || 'なし'})`}
-                  </li>
-                );
-              })}
             </ul>
           </div>
-        ))}
+        )}
+
+        {/* モード切替＆検索 */}
+        <div style={{ ...cardStyle, display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {['maker', 'company'].map(m => (
+              <button
+                key={m}
+                onClick={() => { setMode(m); handleReset(); }}
+                style={{
+                  ...buttonBase,
+                  background: mode === m ? '#3B82F6' : '#9CA3AF',
+                }}
+              >
+                {m === 'maker' ? 'メーカー別' : 'お客様別'}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder={mode === 'maker' ? 'メーカー名検索' : 'お客様名検索'}
+              value={mode === 'maker' ? searchMakerName : searchCompanyName}
+              onChange={e => mode === 'maker' ? setSearchMakerName(e.target.value) : setSearchCompanyName(e.target.value)}
+              style={{ ...inputStyle, width: '160px' }}
+            />
+            <button
+              onClick={mode === 'maker' ? handleMakerSearch : handleCompanySearch}
+              style={{ ...buttonBase, background: '#3B82F6' }}
+            >
+              <FaSearch />
+            </button>
+            <select
+              value={selectedGroup}
+              onChange={e => setSelectedGroup(e.target.value)}
+              style={{ ...inputStyle, width: '180px' }}
+            >
+              <option value="">
+                --{mode === 'maker' ? 'メーカー' : 'お客様'}を選択--
+              </option>
+              {(mode === 'maker' ? (filteredMakers.length ? filteredMakers : makers) : (filteredCompanies.length ? filteredCompanies : companies))
+                .map(g => (
+                  <option key={g.id} value={g.id} style={{ color: '#000' }}>
+                    {g.name}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={handleReset}
+              style={{ ...buttonBase, background: '#6B7280' }}
+            >
+              <FaUndo />
+            </button>
+          </div>
+        </div>
+
+        {/* 印刷対象 */}
+        <div ref={printRef} style={{ ...cardStyle }}>
+          {filteredOrders.map(order => (
+            <div key={order.id} style={{ marginBottom: '16px', borderBottom: '1px solid #000', paddingBottom: '8px' }}>
+              <p>発注日: {order.timestamp?.toDate().toLocaleString()}</p>
+              <p>納品方法: {order.deliveryOption}</p>
+              <p>納品先住所: {order.customAddress}</p>
+              <p>お客様担当者: {order.personName || '未入力'}</p>
+              <p>高橋本社担当者: {order.takahashiContact || '未入力'}</p>
+              <p>納品希望日: {order.deliveryDate}</p>
+              <ul style={{ paddingLeft: '16px' }}>
+                {order.items.map((item, idx) => {
+                  const cname = companies.find(c => c.id === order.companyId)?.name || '';
+                  const mname = makers.find(m => m.id === order.makerId)?.name || '';
+                  return (
+                    <li key={idx} style={{ margin: '4px 0' }}>
+                      {mode === 'company'
+                        ? `${mname} / ${item.itemCode} / ${item.name}：${item.quantity}個 × ${item.price}円 (備考: ${item.remarks || 'なし'})`
+                        : `${cname} / ${item.itemCode} / ${item.name}：${item.quantity}個 × ${item.price}円 (備考: ${item.remarks || 'なし'})`}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
