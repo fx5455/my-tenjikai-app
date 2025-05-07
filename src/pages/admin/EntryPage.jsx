@@ -45,7 +45,7 @@ const EntryPage = () => {
   return (
     <div style={containerStyle}>
       <nav style={navStyle}>
-        <Link to="/admin/orders" style={linkStyle}>&larr; 管理画面に戻る</Link>
+        <Link to="/admin/orders/pdf" style={linkStyle}>&larr; 管理画面に戻る</Link>
       </nav>
       <div style={cardStyle}>
         <h2 style={{ marginBottom: '12px' }}>入場スキャン</h2>
