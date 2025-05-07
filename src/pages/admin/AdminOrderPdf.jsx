@@ -20,24 +20,22 @@ const AdminOrderPdf = () => {
   const [personSortAsc, setPersonSortAsc] = useState(true);
   const printRef = useRef(null);
 
-  // データ取得関数
+  // データ取得
   const fetchAllData = async () => {
     const [ms, cs, os] = await Promise.all([
       getDocs(collection(db, 'makers')),
       getDocs(collection(db, 'companies')),
       getDocs(collection(db, 'orders')),
     ]);
-    setMakers(ms.docs.map(d => ({ id: d.id, name: d.data().name })));
+    setMakers(ms.docs.map(d => ({ id: d.id, name: d.data().name })));  
     setCompanies(cs.docs.map(d => ({ id: d.id, name: d.data().name })));
     setOrders(os.docs.map(d => ({ id: d.id, ...d.data() })));
   };
 
-  // 初期データ取得
-  useEffect(() => {
-    fetchAllData();
-  }, []);
+  // 初期ロード
+  useEffect(() => { fetchAllData(); }, []);
 
-  // お客様別モードで会社選択後、担当者リスト作成
+  // お客様別の担当者リスト
   useEffect(() => {
     if (mode === 'company' && selectedGroup) {
       const names = orders
@@ -53,202 +51,160 @@ const AdminOrderPdf = () => {
   }, [mode, selectedGroup, orders]);
 
   // 検索・リセット
-  const handleCompanySearch = () =>
-    setFilteredCompanies(
-      companies.filter(c => c.name.includes(searchCompanyName))
-    );
-  const handleMakerSearch = () =>
-    setFilteredMakers(
-      makers.filter(m => m.name.includes(searchMakerName))
-    );
+  const handleCompanySearch = () => setFilteredCompanies(
+    companies.filter(c => c.name.includes(searchCompanyName))
+  );
+  const handleMakerSearch = () => setFilteredMakers(
+    makers.filter(m => m.name.includes(searchMakerName))
+  );
   const handleReset = () => {
-    setSearchCompanyName('');
-    setSearchMakerName('');
-    setFilteredCompanies([]);
-    setFilteredMakers([]);
-    setSelectedGroup('');
-    setSelectedStaff('');
-    setStaffList([]);
+    setSearchCompanyName(''); setSearchMakerName('');
+    setFilteredCompanies([]); setFilteredMakers([]);
+    setSelectedGroup(''); setSelectedStaff(''); setStaffList([]);
     setPersonSortAsc(true);
   };
 
-  // フィルタリング
+  // フィルタリング & ソート
   const filteredOrders = orders
-    .filter(o =>
-      selectedGroup
-        ? mode === 'maker'
-          ? o.makerId === selectedGroup
-          : o.companyId === selectedGroup
-        : true
-    )
-    .filter(o =>
-      mode === 'company' && selectedStaff
-        ? o.personName === selectedStaff
-        : true
-    );
-
-  // 担当者名ソート
-  const sortedOrders = [...filteredOrders].sort((a, b) =>
+    .filter(o => selectedGroup ? (mode==='maker'? o.makerId===selectedGroup : o.companyId===selectedGroup) : true)
+    .filter(o => mode==='company' && selectedStaff ? o.personName===selectedStaff : true);
+  const sortedOrders = [...filteredOrders].sort((a,b) =>
     personSortAsc
-      ? (a.personName || '').localeCompare(b.personName || '')
-      : (b.personName || '').localeCompare(a.personName || '')
+      ? (a.personName||'').localeCompare(b.personName||'')
+      : (b.personName||'').localeCompare(a.personName||'')
   );
 
-  // 集計データ
-  const summaryData = (mode === 'maker' ? makers : companies)
+  // 集計
+  const summaryData = (mode==='maker'? makers:companies)
     .map(g => {
       const total = orders
-        .filter(o =>
-          mode === 'maker' ? o.makerId === g.id : o.companyId === g.id
-        )
+        .filter(o => mode==='maker'? o.makerId===g.id : o.companyId===g.id)
         .flatMap(o => o.items)
         .reduce((sum, item) => sum + item.quantity * item.price, 0);
       return { ...g, total };
     })
-    .filter(s => s.total > 0);
+    .filter(s => s.total>0);
+  const totalAmount = filteredOrders.flatMap(o=>o.items).reduce((sum,i)=>sum + i.quantity*i.price, 0);
 
-  // 合計金額
-  const totalAmount = filteredOrders
-    .flatMap(o => o.items)
-    .reduce((sum, item) => sum + item.quantity * item.price, 0);
-
-  // 印刷機能
+  // 印刷
   const handlePrint = () => {
     if (!printRef.current) return;
-    const contentHTML = printRef.current.innerHTML;
-    const isCompany = mode === 'company';
-    const titleText = isCompany ? '発注書（控え）' : '発注書';
-    const recipientName =
-      (isCompany
-        ? companies.find(c => c.id === selectedGroup)?.name
-        : makers.find(m => m.id === selectedGroup)?.name) || '';
+    const content = printRef.current.innerHTML;
+    const isCompany = mode==='company';
+    const titleText = isCompany?'発注書（控え）':'発注書';
+    const recipientName = isCompany
+      ? companies.find(c=>c.id===selectedGroup)?.name
+      : makers.find(m=>m.id===selectedGroup)?.name || '';
     const recipient = `${recipientName} 御中`;
 
     const w = window.open('', '_blank', 'width=800,height=600');
     w.document.write(`
       <html>
       <head><title>${titleText}</title><style>
-        @page { size: A4; margin: 20mm; }
-        body { margin:0; padding:0; font-family:Arial,sans-serif; }
-        .printContainer { width:170mm; margin:0 auto; padding:10mm; }
-        .header-main { text-align:center; font-size:24px; font-weight:bold; margin-bottom:6mm; }
-        .header-sub { display:flex; justify-content:space-between; font-size:12px; margin-bottom:10mm; }
-        .order-item { margin-bottom:8mm; border-bottom:1px solid #000; padding-bottom:4mm; }
-        .order-item p, .order-item ul { font-size:12px; margin:2px 0; }
-        .summary-box { text-align:right; margin-top:10mm; font-size:16px; }
+        @page { size: A4; margin:20mm; }
+        body{margin:0;padding:0;font-family:Arial,sans-serif;}
+        .printContainer{width:170mm;margin:0 auto;padding:10mm;}
+        .header-main{text-align:center;font-size:24px;font-weight:bold;margin-bottom:6mm;}
+        .header-sub{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10mm;}
+        .order-item{margin-bottom:8mm;border-bottom:1px solid #000;padding-bottom:4mm;}
+        .order-item p,.order-item ul{font-size:12px;margin:2px 0;}
+        .summary-box{text-align:right;margin-top:10mm;font-size:16px;}
       </style></head>
       <body>
         <div class="printContainer">
           <div class="header-main">${titleText}</div>
-          <div class="header-sub">
-            <div>${recipient}</div>
-            <div>
-              株式会社高橋本社<br>
-              〒131-0032 東京都墨田区東向島1-3-4<br>
-              TEL 03-3610-1010 FAX 03-3610-2720
-            </div>
-          </div>
-          ${contentHTML}
+          <div class="header-sub"><div>${recipient}</div><div>
+            株式会社高橋本社<br>〒131-0032 東京都墨田区東向島1-3-4<br>
+            TEL 03-3610-1010 FAX 03-3610-2720
+          </div></div>
+          ${content}
           <div class="summary-box">合計 ${totalAmount.toLocaleString()} 円（税込）</div>
         </div>
       </body>
       </html>
     `);
-    w.document.close();
-    w.print();
+    w.document.close(); w.print();
   };
+
+  // インラインスタイル定義
+  const navStyle = { marginBottom:'16px', display:'flex', gap:'16px' };
+  const linkStyle = { color:'#2563EB', textDecoration:'none' };
+  const containerStyle = { maxWidth:'800px', margin:'0 auto', padding:'16px', backgroundColor:'#fff', color:'#000' };
+  const cardStyle = { background:'#fff', borderRadius:'8px', boxShadow:'0 2px 8px rgba(0,0,0,0.1)', padding:'16px', marginBottom:'16px', color:'#000' };
+  const sectionStyle = { marginBottom:'16px', padding:'12px', background:'#f7f7f7', borderRadius:'4px', color:'#000' };
+  const inputStyle = { padding:'8px', borderRadius:'4px', border:'1px solid #ccc', backgroundColor:'#fff', color:'#000' };
+  const buttonBase = { padding:'8px 16px', border:'none', borderRadius:'4px', cursor:'pointer', color:'#fff' };
+  const resetButton = { ...buttonBase, background:'#6B7280' };
+  const primaryButton = bg => ({ ...buttonBase, background:bg });
 
   return (
     <>
-      {/* ナビゲーション */}
-      <nav style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-        <Link to="/admin/entry" style={{ color: '#2563EB' }}>入場スキャン</Link>
-        <Link to="/admin/exit" style={{ color: '#2563EB' }}>退場スキャン</Link>
-        <Link to="/" style={{ color: '#2563EB' }}>— 発注登録</Link>
+      <nav style={navStyle}>
+        <Link to="/admin/entry" style={linkStyle}>入場スキャン</Link>
+        <Link to="/admin/exit" style={linkStyle}>退場スキャン</Link>
+        <Link to="/" style={linkStyle}>&mdash; 発注登録</Link>
       </nav>
 
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: 16 }}>
-        {/* 操作バー */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={containerStyle}>
+        <div style={{ ...cardStyle, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div>
-            <button onClick={() => setShowSummary(!showSummary)} style={{ background: '#10B981', color: '#fff', padding: '8px 16px', marginRight: 8 }}>
-              {showSummary ? '集計を隠す' : '集計を表示'}
+            <button onClick={()=>setShowSummary(!showSummary)} style={primaryButton('#10B981')}>
+              {showSummary?'集計を隠す':'集計を表示'}
             </button>
-            {filteredOrders.length > 0 && (
-              <button onClick={handlePrint} style={{ background: '#FBBF24', color: '#000', padding: '8px 16px', marginRight: 8 }}>
-                <FaPrint /> 印刷
-              </button>
+            {filteredOrders.length>0 && (
+              <button onClick={handlePrint} style={primaryButton('#FBBF24')}><FaPrint /> 印刷</button>
             )}
-            <button onClick={fetchAllData} style={{ background: '#3B82F6', color: '#fff', padding: '8px 16px' }}>
-              <FaSync /> 更新
-            </button>
+            <button onClick={fetchAllData} style={primaryButton('#3B82F6')}><FaSync /> 更新</button>
           </div>
         </div>
 
-        {/* 集計表示 */}
         {showSummary && (
-          <div style={{ border: '1px solid #ddd', padding: 16, marginBottom: 16 }}>
-            <h3>{mode === 'maker' ? 'メーカー別集計' : 'お客様別集計'}</h3>
+          <div style={cardStyle}>
+            <h3>{mode==='maker'? 'メーカー別集計':'お客様別集計'}</h3>
             <ul>
-              {summaryData.map(s => (
-                <li key={s.id}>{s.name}：{s.total.toLocaleString()} 円</li>
-              ))}
+              {summaryData.map(s=><li key={s.id}>{s.name}：{s.total.toLocaleString()}円</li>)}
             </ul>
           </div>
         )}
 
-        {/* フィルター */}
-        <div style={{ border: '1px solid #ddd', padding: 16, marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {/* モード切替 */}
-          <div>
-            <button onClick={() => { setMode('maker'); handleReset(); }} style={{ marginRight: 8, background: mode==='maker'?'#3B82F6':'#9CA3AF', color:'#fff', padding:'8px 16px' }}>メーカー別</button>
-            <button onClick={() => { setMode('company'); handleReset(); }} style={{ background: mode==='company'?'#3B82F6':'#9CA3AF', color:'#fff', padding:'8px 16px' }}>お客様別</button>
-          </div>
+        <div style={sectionStyle}>
+          <button onClick={()=>{setMode('maker');handleReset();}} style={primaryButton(mode==='maker'?'#3B82F6':'#9CA3AF')}>メーカー別</button>
+          <button onClick={()=>{setMode('company');handleReset();}} style={primaryButton(mode==='company'?'#3B82F6':'#9CA3AF')}>お客様別</button>
+        </div>
 
-          {/* メーカー/お客様検索 */}
-          <div>
-            <input
-              type="text"
-              placeholder={mode==='maker'?'メーカー名検索':'お客様名検索'}
-              value={mode==='maker'?searchMakerName:searchCompanyName}
-              onChange={e=>mode==='maker'?setSearchMakerName(e.target.value):setSearchCompanyName(e.target.value)}
-              style={{ padding:8, border:'1px solid #ccc' }}
-            />
-            <button onClick={mode==='maker'?handleMakerSearch:handleCompanySearch} style={{ marginLeft:4, padding:'8px' }}><FaSearch /></button>
-          </div>
+        <div style={sectionStyle}>
+          <input
+            type="text"
+            placeholder={mode==='maker'? 'メーカー名検索':'お客様名検索'}
+            value={mode==='maker'?searchMakerName:searchCompanyName}
+            onChange={e=>mode==='maker'?setSearchMakerName(e.target.value):setSearchCompanyName(e.target.value)}
+            style={inputStyle}
+          />
+          <button onClick={mode==='maker'?handleMakerSearch:handleCompanySearch} style={primaryButton('#3B82F6')}><FaSearch /></button>
 
-          {/* グループ選択 */}
-          <div>
-            <select value={selectedGroup} onChange={e=>setSelectedGroup(e.target.value)} style={{ padding:8, border:'1px solid #ccc' }}>
-              <option value="">--{mode==='maker'?'メーカー':'お客様'}を選択--</option>
-              {(mode==='maker'? (filteredMakers.length?filteredMakers:makers) : (filteredCompanies.length?filteredCompanies:companies))
-                .map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          </div>
+          <select value={selectedGroup} onChange={e=>setSelectedGroup(e.target.value)} style={inputStyle}>
+            <option value="">--{mode==='maker'?'メーカー':'お客様'}を選択--</option>
+            {(mode==='maker'? (filteredMakers.length?filteredMakers:makers) : (filteredCompanies.length?filteredCompanies:companies))
+              .map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
 
-          {/* リセット */}
-          <button onClick={handleReset} style={{ background:'#6B7280', color:'#fff', padding:'8px 16px' }}><FaUndo /></button>
+          <button onClick={handleReset} style={resetButton}><FaUndo /></button>
 
-          {/* お客様担当者選択 */}
           {mode==='company' && staffList.length>0 && (
-            <div>
-              <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)} style={{ padding:8, border:'1px solid #ccc' }}>
-                <option value="">--担当者を選択--</option>
-                {staffList.map(name=><option key={name} value={name}>{name} 様</option>)}
-              </select>
-            </div>
+            <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)} style={inputStyle}>
+              <option value="">--担当者を選択--</option>
+              {staffList.map(name=><option key={name} value={name}>{name} 様</option>)}
+            </select>
           )}
 
-          {/* 担当者順ソート */}
-          <button onClick={()=>setPersonSortAsc(!personSortAsc)} style={{ background:'#6B7280', color:'#fff', padding:'8px 16px' }}>
+          <button onClick={()=>setPersonSortAsc(!personSortAsc)} style={resetButton}>
             {personSortAsc?<FaSortAlphaDown/>:<FaSortAlphaUp/>} 担当者順
           </button>
         </div>
 
-        {/* 発注一覧 */}
-        <div ref={printRef}>
+        <div ref={printRef} style={cardStyle}>
           {sortedOrders.map(order=>(
-            <div key={order.id} style={{ borderBottom:'1px solid #000', padding:'8px 0' }}>
+            <div key={order.id} style={{ marginBottom:'16px', borderBottom:'1px solid #000', paddingBottom:'8px' }}>
               <p>発注日: {order.timestamp?.toDate().toLocaleString()}</p>
               <p>納品方法: {order.deliveryOption}</p>
               <p>納品先: {order.customAddress}</p>
@@ -257,7 +213,7 @@ const AdminOrderPdf = () => {
               <p>納品希望日: {order.deliveryDate}</p>
               <ul>
                 {order.items.map((item,idx)=>(
-                  <li key={idx}>{mode==='company'?makers.find(m=>m.id===order.makerId)?.name:' '}/ {item.itemCode} {item.name}：{item.quantity}×{item.price}円 (備考:{item.remarks||'なし'})</li>
+                  <li key={idx}>{mode==='company'?makers.find(m=>m.id===order.makerId)?.name:''} / {item.itemCode} / {item.name}：{item.quantity}×{item.price}円 (備考:{item.remarks||'なし'})</li>
                 ))}
               </ul>
             </div>
