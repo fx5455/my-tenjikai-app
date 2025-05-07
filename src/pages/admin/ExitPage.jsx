@@ -1,5 +1,6 @@
 // src/pages/admin/ExitPage.jsx
-import React from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   collection,
   query,
@@ -14,10 +15,11 @@ import { db } from '../../firebase';
 import QRCodeScanner from '../../components/QRCodeScanner';
 
 const ExitPage = () => {
+  const [scanning, setScanning] = useState(true);
+
   const handleScan = async (qrData) => {
     try {
       const companyId = qrData.text || qrData;
-      // 最新の open セッションを１件取得
       const q = query(
         collection(db, 'orders'),
         where('companyId', '==', companyId),
@@ -30,24 +32,44 @@ const ExitPage = () => {
         alert('未終了のセッションが見つかりません。');
         return;
       }
-      const orderDoc = snapshot.docs[0];
-      // endedAt, status を更新してクローズ
-      await updateDoc(orderDoc.ref, {
+      const docRef = snapshot.docs[0].ref;
+      await updateDoc(docRef, {
         endedAt: serverTimestamp(),
         status: 'closed',
         updatedAt: serverTimestamp(),
       });
       alert('退場を記録しました。発注書を確定できます。');
+      setScanning(false);
     } catch (error) {
-      console.error('ExitPage scan error:', error);
+      console.error('ExitPage error:', error);
       alert('退場記録中にエラーが発生しました。');
     }
   };
 
+  const handleCancel = () => {
+    setScanning(false);
+  };
+
+  // Styling
+  const containerStyle = { padding: '24px', maxWidth: '600px', margin: '0 auto', background: '#f9f9f9' };
+  const navStyle = { marginBottom: '16px' };
+  const linkStyle = { color: '#2563EB', textDecoration: 'none', fontWeight: 'bold' };
+  const cardStyle = { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' };
+  const buttonStyle = { padding: '8px 16px', fontSize: '16px', borderRadius: '4px', border: 'none', background: '#3B82F6', color: '#fff', cursor: 'pointer' };
+
   return (
-    <div style={{ padding: '16px' }}>
-      <h2>退場スキャン</h2>
-      <QRCodeScanner onScan={handleScan} />
+    <div style={containerStyle}>
+      <nav style={navStyle}>
+        <Link to="/admin/orders" style={linkStyle}>&larr; 管理画面に戻る</Link>
+      </nav>
+      <div style={cardStyle}>
+        <h2 style={{ marginBottom: '12px' }}>退場スキャン</h2>
+        {scanning ? (
+          <QRCodeScanner onScan={handleScan} onCancel={handleCancel} />
+        ) : (
+          <button style={buttonStyle} onClick={() => setScanning(true)}>再スキャン</button>
+        )}
+      </div>
     </div>
   );
 };
