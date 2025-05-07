@@ -16,6 +16,8 @@ const AdminOrderPdf = () => {
   const [filteredMakers, setFilteredMakers] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState('');
+  const [sessionList, setSessionList] = useState([]);
+  const [selectedSession, setSelectedSession] = useState('');
   const [showSummary, setShowSummary] = useState(false);
   const [personSortAsc, setPersonSortAsc] = useState(true);
   const printRef = useRef(null);
@@ -34,18 +36,21 @@ const AdminOrderPdf = () => {
 
   useEffect(() => { fetchAllData(); }, []);
 
-  // お客様別担当者リスト
+  // お客様別担当者・セッション一覧更新
   useEffect(() => {
     if (mode === 'company' && selectedGroup) {
-      const names = orders
-        .filter(o => o.companyId === selectedGroup)
-        .map(o => o.personName || '')
-        .filter(n => n);
-      setStaffList(Array.from(new Set(names)));
+      const filtered = orders.filter(o => o.companyId === selectedGroup);
+      const staffNames = filtered.map(o => o.personName || '').filter(n => n);
+      setStaffList(Array.from(new Set(staffNames)));
+      const sessions = filtered.map(o => o.sessionId || '').filter(s => s);
+      setSessionList(Array.from(new Set(sessions)));
       setSelectedStaff('');
+      setSelectedSession('');
     } else {
       setStaffList([]);
+      setSessionList([]);
       setSelectedStaff('');
+      setSelectedSession('');
     }
   }, [mode, selectedGroup, orders]);
 
@@ -64,6 +69,8 @@ const AdminOrderPdf = () => {
     setSelectedGroup('');
     setSelectedStaff('');
     setStaffList([]);
+    setSelectedSession('');
+    setSessionList([]);
     setPersonSortAsc(true);
   };
 
@@ -73,7 +80,8 @@ const AdminOrderPdf = () => {
       (mode === 'maker' ? o.makerId === selectedGroup : o.companyId === selectedGroup)
       : true
     )
-    .filter(o => mode === 'company' && selectedStaff ? o.personName === selectedStaff : true);
+    .filter(o => mode === 'company' && selectedStaff ? o.personName === selectedStaff : true)
+    .filter(o => mode === 'company' && selectedSession ? o.sessionId === selectedSession : true);
   const sortedOrders = [...filteredOrders].sort((a, b) =>
     personSortAsc
       ? (a.personName || '').localeCompare(b.personName || '')
@@ -123,7 +131,7 @@ const AdminOrderPdf = () => {
         <div class="printContainer">
           <div class="header-main">${titleText}</div>
           <div class="header-sub">
-            <div class="recipient" style="colorScheme: light; -webkit-text-fill-color: #000;">${recipient}</div>
+            <div class="recipient">${recipient}</div>
             <div class="address">
               株式会社高橋本社<br>
               〒131-0032 東京都墨田区東向島1-3-4<br>
@@ -158,6 +166,30 @@ const AdminOrderPdf = () => {
         <Link to="/admin/exit" style={linkStyle}>退場スキャン</Link>
         <Link to="/" style={linkStyle}>&mdash; 発注登録</Link>
       </nav>
+      {/* フィルターUI */}
+      <section style={sectionStyle}>
+        <button onClick={()=>{setMode('maker');handleReset();}} style={primaryButton(mode==='maker'?'#3B82F6':'#9CA3AF')}>メーカー別</button>
+        <button onClick={()=>{setMode('company');handleReset();}} style={primaryButton(mode==='company'?'#3B82F6':'#9CA3AF')}>お客様別</button>
+      </section>
+
+      <section style={sectionStyle}>
+        {/* ... 既存の検索とグループ選択 ... */}
+        {mode==='company' && (
+          <>
+            {/* お客様担当者 */}
+            <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)} style={inputStyle}>
+              <option value="">--担当者を選択--</option>
+              {staffList.map(name=> <option key={name} value={name}>{name} 様</option>)}
+            </select>
+            {/* 追加: セッションID選択 */}
+            <select value={selectedSession} onChange={e=>setSelectedSession(e.target.value)} style={inputStyle}>
+              <option value="">--セッションIDを選択--</option>
+              {sessionList.map(id=> <option key={id} value={id}>{id}</option>)}
+            </select>
+          </>
+        )}
+      </section>
+
       <div style={containerStyle}>
         <div style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
