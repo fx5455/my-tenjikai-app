@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   updateDoc,
   doc,
-  limit
+  limit,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -144,7 +144,7 @@ const OrderEntry = () => {
   // スキャンハンドラ：メーカー
   const handleMakerScan = (id) => {
     setMakerId(id);
-    setScanningFor(null);
+    // scanningFor は onCancel でクリアされます
   };
 
   // フォーム送信
@@ -178,7 +178,7 @@ const OrderEntry = () => {
     }
   };
 
-  // 共通スタイル
+  // 共通スタイル定義
   const containerStyle = {
     maxWidth: '800px',
     margin: '0 auto',
@@ -248,14 +248,14 @@ const OrderEntry = () => {
             }}
           >
             <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
-                   <QRCodeScanner
-         mode={scanningFor}
-         onScan={(id) => {
-           if (scanningFor === 'company') handleCompanyScan(id);
-           else handleMakerScan(id);
-         }}
-         onCancel={() => setScanningFor(null)}
-       />
+              <QRCodeScanner
+                mode={scanningFor}
+                onScan={(id) => {
+                  if (scanningFor === 'company') handleCompanyScan(id);
+                  else if (scanningFor === 'maker') handleMakerScan(id);
+                }}
+                onCancel={() => setScanningFor(null)}
+              />
             </div>
           </div>
         )}
@@ -348,7 +348,7 @@ const OrderEntry = () => {
 
             {/* 高橋本社担当 */}
             <div style={{ flex: '1 1 200px' }}>
-            <label style={{ fontWeight: '600' }}>高橋本社担当</label>
+              <label style={{ fontWeight: '600' }}>高橋本社担当</label>
               <input
                 value={takahashiContact}
                 onChange={(e) => setTakahashiContact(e.target.value)}
