@@ -29,7 +29,7 @@ const OrderEntry = () => {
 
   // ステート初期化
   const [orders, setOrders] = useState([
-    { itemCode: '', name: '', quantity: '', price: '', remarks: '' }
+    { itemCode: '', name: '', quantity: '', price: '', remarks: '' },
   ]);
   const [companyId, setCompanyId] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -52,17 +52,27 @@ const OrderEntry = () => {
 
   // お客様名フェッチ
   useEffect(() => {
-    if (!companyId) return setCompanyName('');
+    if (!companyId) {
+      setCompanyName('');
+      return;
+    }
     getDoc(doc(db, 'companies', companyId))
-      .then((snap) => setCompanyName(snap.exists() ? snap.data().name : '該当なし'))
+      .then((snap) =>
+        setCompanyName(snap.exists() ? snap.data().name : '該当なし')
+      )
       .catch(() => setCompanyName('取得失敗'));
   }, [companyId]);
 
   // メーカー名フェッチ
   useEffect(() => {
-    if (!makerId) return setMakerName('');
+    if (!makerId) {
+      setMakerName('');
+      return;
+    }
     getDoc(doc(db, 'makers', makerId))
-      .then((snap) => setMakerName(snap.exists() ? snap.data().name : '該当なし'))
+      .then((snap) =>
+        setMakerName(snap.exists() ? snap.data().name : '該当なし')
+      )
       .catch(() => setMakerName('取得失敗'));
   }, [makerId]);
 
@@ -78,7 +88,7 @@ const OrderEntry = () => {
     ).then((snap) => {
       if (snap.empty) return;
       const data = snap.docs[0].data();
-      setOrders(data.items);
+      setOrders(data.items || []);
       setDeliveryOption(data.deliveryOption);
       setCustomAddress(data.customAddress);
       setTakahashiContact(data.takahashiContact);
@@ -95,11 +105,18 @@ const OrderEntry = () => {
     arr[idx][field] = value;
     setOrders(arr);
   };
-  const addRow = () => setOrders([...orders, { itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
+  const addRow = () =>
+    setOrders([
+      ...orders,
+      { itemCode: '', name: '', quantity: '', price: '', remarks: '' },
+    ]);
   const removeRow = (idx) => setOrders(orders.filter((_, i) => i !== idx));
 
   // フォーム有効性チェック
-  const isValid = Boolean(companyId) && Boolean(makerId) && orders.every(o => o.name && o.quantity && o.price);
+  const isValid =
+    Boolean(companyId) &&
+    Boolean(makerId) &&
+    orders.every((o) => o.name && o.quantity && o.price);
 
   // スキャンハンドラ：お客様
   const handleCompanyScan = async (id) => {
@@ -114,10 +131,11 @@ const OrderEntry = () => {
         )
       );
       if (sessionSnap.empty) {
-        alert('先に入場スキャンを行ってください');
+        alert('入場スキャンが完了していません。先に入場スキャンを行ってください。');
         setCompanyId('');
       }
-    } catch {
+    } catch (error) {
+      console.error(error);
       alert('入場チェックに失敗しました');
     }
     setScanningFor(null);
@@ -154,85 +172,149 @@ const OrderEntry = () => {
         await addDoc(collection(db, 'orders'), payload);
         alert('登録しました');
       }
-    } catch {
+    } catch (error) {
+      console.error(error);
       alert('送信に失敗しました');
     }
   };
 
-  // スタイル定義
-  const baseInput = { width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' };
+  // 共通スタイル
+  const containerStyle = {
+    maxWidth: '800px',
+    margin: '0 auto',
+    padding: '16px',
+    backgroundColor: '#fff',
+    color: '#000',
+  };
+  const cardStyle = {
+    background: '#fff',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    padding: '16px',
+    marginBottom: '16px',
+    color: '#000',
+  };
+  const sectionStyle = {
+    marginBottom: '16px',
+    padding: '12px',
+    background: '#f7f7f7',
+    borderRadius: '4px',
+    color: '#000',
+  };
+  const inputStyle = {
+    width: '100%',
+    padding: '8px',
+    borderRadius: '4px',
+    border: '1px solid #ccc',
+    backgroundColor: '#fff',
+    color: '#000',
+  };
+  const buttonStyle = {
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  };
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 16 }}>
-      <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>
-        展示会 発注登録 {isEditing && '(編集中)'}
-      </h2>
-      <div style={{ textAlign: 'right', marginBottom: '12px' }}>
-        <button
-          onClick={handleAdminClick}
-          style={{ padding: '8px 16px', background: '#10B981', color: '#fff', border: 'none', borderRadius: 4 }}
-        >
-          管理画面
-        </button>
-      </div>
+    <div style={containerStyle}>
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>
+          展示会 発注登録{' '}
+          {isEditing && <span style={{ color: '#2563EB' }}>(編集中)</span>}
+        </h2>
 
-      {scanningFor && (
-        <QRCodeScanner
-          mode={scanningFor}
-          setCompanyId={handleCompanyScan}
-          setMakerId={handleMakerScan}
-          onCancel={() => setScanningFor(null)}
-        />
-      )}
-
-      <section style={{ marginBottom: '16px' }}>
-        <label style={{ fontWeight: 600 }}>お客様ID</label>
-        <div style={{ display: 'flex', gap: 8 }}> 
-          <input
-            style={baseInput}
-            value={companyId}
-            onChange={e => setCompanyId(e.target.value)}
-            placeholder="お客様ID"
-          />
+        {/* 管理画面ボタン */}
+        <div style={{ textAlign: 'right', marginBottom: '12px' }}>
           <button
-            onClick={() => setScanningFor('company')}
-            style={{ padding: '8px 16px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: 4 }}
+            onClick={handleAdminClick}
+            style={{
+              ...buttonStyle,
+              background: '#10B981',
+              color: '#fff',
+            }}
           >
-            Scan
+            管理画面
           </button>
         </div>
-        <div style={{ marginTop: '4px', color: '#6B7280' }}>{companyName}</div>
-      </section>
 
-      <section style={{ marginBottom: '16px' }}>
-        <label style={{ fontWeight: 600 }}>メーカーID</label>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            style={baseInput}
-            disabled={makerLocked}
-            value={makerId}
-            onChange={e => setMakerId(e.target.value)}
-            placeholder="メーカーID"
-          />
-          <button
-            onClick={() => setScanningFor('maker')}
-            disabled={makerLocked}
-            style={{ padding: '8px 16px', background: '#A855F7', color: '#fff', border: 'none', borderRadius: 4 }}
+        {/* スキャンモーダル */}
+        {scanningFor && (
+          <div
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+            }}
           >
-            Scan
-          </button>
-          <label style={{ display: 'flex', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={makerLocked}
-              onChange={e => setMakerLocked(e.target.checked)}
-              style={{ marginRight: 4 }}
-            />
-            固定
-          </label>
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
+              <QRCodeScanner
+                mode={scanningFor}
+                onScan={(id) => {
+                  if (scanningFor === 'company') handleCompanyScan(id);
+                  else handleMakerScan(id);
+                }}
+                onCancel={() => setScanningFor(null)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* お客様／メーカー */}
+        <div style={{ ...sectionStyle, display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ fontWeight: '600' }}>お客様ID</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+                placeholder="お客様ID"
+                style={inputStyle}
+              />
+              <button
+                onClick={() => setScanningFor('company')}
+                style={{ ...buttonStyle, background: '#3B82F6', color: '#fff' }}
+              >
+                Scan
+              </button>
+            </div>
+            {companyName && (
+              <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {companyName}</div>
+            )}
+          </div>
+
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ fontWeight: '600' }}>メーカーID</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                value={makerId}
+                onChange={(e) => setMakerId(e.target.value)}
+                disabled={makerLocked}
+                placeholder="メーカーID"
+                style={inputStyle}
+              />
+              <button
+                onClick={() => setScanningFor('maker')}
+                disabled={makerLocked}
+                style={{ ...buttonStyle, background: '#A855F7', color: '#fff' }}
+              >
+                Scan
+              </button>
+              <label style={{ marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={makerLocked}
+                  onChange={(e) => setMakerLocked(e.target.checked)}
+                  style={{ marginRight: '4px' }}
+                />
+                固定
+              </label>
+            </div>
+            {makerName && (
+              <div style={{ marginTop: '4px', color: '#6B7280' }}>→ {makerName}</div>
+            )}
+          </div>
         </div>
-        <div style={{ marginTop: '4px', color: '#6B7280' }}>{makerName}</div>
-      </section>
 
         {/* 配送・担当者 */}
         <div style={sectionStyle}>
@@ -353,13 +435,18 @@ const OrderEntry = () => {
 
         {/* 登録ボタン */}
         <div style={{ textAlign: 'right' }}>
-        <button
-          onClick={handleSubmit}
-          disabled={!isValid}
-          style={{ padding: '10px 20px', background: isValid ? '#3B82F6' : '#D1D5DB', color: isValid ? '#fff' : '#6B7280', border: 'none', borderRadius: 4 }}
-        >
-          {isEditing ? '更新' : '登録'}
-        </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!isValid}
+            style={{
+              ...buttonStyle,
+              background: isValid ? '#3B82F6' : '#D1D5DB',
+              color: isValid ? '#fff' : '#6B7280',
+            }}
+          >
+            {isEditing ? '更新' : '登録'}
+          </button>
+        </div>
       </div>
     </div>
   );
