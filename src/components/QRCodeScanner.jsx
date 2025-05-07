@@ -1,3 +1,4 @@
+// src/components/QRCodeScanner.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -6,13 +7,12 @@ import { Html5Qrcode } from 'html5-qrcode';
  * 
  * Props:
  * - mode: 'company' | 'maker'
- * - setCompanyId: (id: string) => void
- * - setMakerId: (id: string) => void
+ * - onScan: (id: string) => void
  * - onCancel: () => void
  * 
- * マウント時にカメラを起動し、QRコード読み取り後にIDを返却します。
+ * マウント時にカメラを起動し、QRコード読み取り後に onScan(id) を呼び出します。
  */
-const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
+const QRCodeScanner = ({ mode, onScan, onCancel }) => {
   const qrRegionId = 'reader';
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(true);
@@ -36,13 +36,9 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
             { fps: 10, qrbox: 250 },
             decodedText => {
               const id = decodedText.trim();
-              if (mode === 'company') {
-                setCompanyId(id);
-              } else {
-                setMakerId(id);
-              }
+              onScan(id);
               setIsScanning(false);
-              onCancel && onCancel();
+              onCancel?.();
             },
             errorMessage => {
               console.warn('読み取り中:', errorMessage);
@@ -61,11 +57,11 @@ const QRCodeScanner = ({ mode, setCompanyId, setMakerId, onCancel }) => {
         sc.stop().catch(() => {}).then(() => sc.clear());
       }
     };
-  }, [isScanning, mode, setCompanyId, setMakerId, onCancel]);
+  }, [isScanning, mode, onScan, onCancel]);
 
   const handleCancel = () => {
     setIsScanning(false);
-    onCancel && onCancel();
+    onCancel?.();
   };
 
   return (
