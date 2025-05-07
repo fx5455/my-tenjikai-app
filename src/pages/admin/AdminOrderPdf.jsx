@@ -109,22 +109,22 @@ const AdminOrderPdf = () => {
       <html>
       <head><title>${titleText}</title><style>
         @page { size: A4; margin: 20mm; }
-        body { margin:0; padding:0; font-family:Arial,sans-serif; }
-        .printContainer { width:170mm; margin:0 auto; padding:10mm; }
+        body { margin:0; padding:0; font-family:Arial,sans-serif; color:#000; background:#fff; }
+        .printContainer { width:170mm; margin:0 auto; padding:10mm; background:#fff; color:#000; }
         .header-main { text-align:center; font-size:24px; font-weight:bold; margin-bottom:6mm; }
-        .header-sub { display:flex; justify-content:space-between; margin-bottom:10mm; }
-        .header-sub .recipient { font-size:18px; font-weight:bold; }
-        .header-sub div { font-size:12px; }
+        .header-sub { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10mm; }
+        .header-sub .recipient { font-size:18px; font-weight:bold; max-width:50%; white-space:normal; word-break:break-word; }
+        .header-sub div.address { font-size:12px; text-align:right; }
         .order-item { margin-bottom:8mm; border-bottom:1px solid #000; padding-bottom:4mm; }
         .order-item p, .order-item ul { font-size:12px; margin:2px 0; }
-        .summary-box { text-align:right; margin-top:10mm; font-size:20px; border:2px solid #000; padding:8px; display:inline-block; }
+        .summary-box { text-align:right; margin-top:10mm; font-size:20px; background:#000; color:#fff; padding:8px 16px; display:inline-block; float:right; }
       </style></head>
       <body>
         <div class="printContainer">
           <div class="header-main">${titleText}</div>
           <div class="header-sub">
-            <div class="recipient">${recipient}</div>
-            <div>
+            <div class="recipient" style="colorScheme: light; -webkit-text-fill-color: #000;">${recipient}</div>
+            <div class="address">
               株式会社高橋本社<br>
               〒131-0032 東京都墨田区東向島1-3-4<br>
               TEL 03-3610-1010 FAX 03-3610-2720
@@ -140,19 +140,19 @@ const AdminOrderPdf = () => {
     w.print();
   };
 
-  // インラインスタイル定義
-  const navStyle = { marginBottom: '16px', display: 'flex', gap: '16px' };
-  const linkStyle = { color: '#2563EB', textDecoration: 'none' };
-  const containerStyle = { maxWidth: '800px', margin: '0 auto', padding: '16px', backgroundColor: '#fff' };
-  const cardStyle = { background: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', padding: '16px', marginBottom: '16px' };
-  const sectionStyle = { marginBottom: '16px', padding: '12px', background: '#f7f7f7', borderRadius: '4px' };
-  const inputStyle = { padding: '8px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff' };
-  const buttonBase = { padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' };
-  const resetButton = { ...buttonBase, background: '#6B7280' };
-  const primaryButton = bg => ({ ...buttonBase, background: bg });
+  // インラインスタイル定義（ダークモード回避用）
+  const navStyle      = { marginBottom:'16px', display:'flex', gap:'16px', background:'#fff', color:'#000', WebkitTextFillColor:'#000' };
+  const linkStyle     = { color:'#2563EB', textDecoration:'none' };
+  const containerStyle= { maxWidth:'800px', margin:'0 auto', padding:'16px', backgroundColor:'#fff', color:'#000', WebkitTextFillColor:'#000' };
+  const cardStyle     = { background:'#fff', borderRadius:'8px', boxShadow:'0 2px 8px rgba(0,0,0,0.1)', padding:'16px', marginBottom:'16px', color:'#000', WebkitTextFillColor:'#000' };
+  const sectionStyle  = { marginBottom:'16px', padding:'12px', background:'#f7f7f7', borderRadius:'4px', color:'#000', WebkitTextFillColor:'#000' };
+  const inputStyle    = { padding:'8px', borderRadius:'4px', border:'1px solid #ccc', backgroundColor:'#fff', color:'#000', WebkitTextFillColor:'#000' };
+  const buttonBase    = { padding:'8px 16px', border:'none', borderRadius:'4px', cursor:'pointer', color:'#fff', WebkitTextFillColor:'#fff' };
+  const resetButton   = { ...buttonBase, background:'#6B7280' };
+  const primaryButton = bg=>({ ...buttonBase, background:bg });
 
   return (
-    <>
+    <div style={containerStyle}>
       <nav style={navStyle}>
         <Link to="/admin/entry" style={linkStyle}>入場スキャン</Link>
         <Link to="/admin/exit" style={linkStyle}>退場スキャン</Link>
@@ -233,7 +233,7 @@ const AdminOrderPdf = () => {
           ))}
         </div>
       </div>
-    </>
+      </div>
   );
 };
 
