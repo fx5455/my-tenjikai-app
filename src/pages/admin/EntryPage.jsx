@@ -29,7 +29,7 @@ const EntryPage = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '600px', margin: '0 auto', background: '#f9f9f9' }}>
       <nav style={{ marginBottom: '16px' }}>
-        <Link to="/admin/orders" style={{ color: '#2563EB', textDecoration: 'none', fontWeight: 'bold' }}>&larr; 管理画面に戻る</Link>
+        <Link to="/admin/orders/pdf" style={{ color: '#2563EB', textDecoration: 'none', fontWeight: 'bold' }}>&larr; 管理画面に戻る</Link>
       </nav>
       <div style={{ background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <h2 style={{ marginBottom: '12px' }}>入場スキャン</h2>
