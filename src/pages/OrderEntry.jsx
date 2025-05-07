@@ -248,17 +248,14 @@ const OrderEntry = () => {
             }}
           >
             <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
-              <QRCodeScanner
-                mode={scanningFor}
-                onScan={(id) => {
-                  if (scanningFor === 'company') {
-                  handleCompanyScan(id);
-                } else {
-                  handleMakerScan(id);
-                  }
-                  }}
-                  onCancel={() => setScanningFor(null)}
-                  />
+                   <QRCodeScanner
+         mode={scanningFor}
+         onScan={(id) => {
+           if (scanningFor === 'company') handleCompanyScan(id);
+           else handleMakerScan(id);
+         }}
+         onCancel={() => setScanningFor(null)}
+       />
             </div>
           </div>
         )}

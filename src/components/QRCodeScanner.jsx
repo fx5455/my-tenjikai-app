@@ -3,14 +3,10 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 /**
- * QRCodeScanner.jsx
- * 
  * Props:
- * - mode: 'company' | 'maker'
- * - onScan: (id: string) => void
- * - onCancel: () => void
- * 
- * マウント時にカメラを起動し、QRコード読み取り後に onScan(id) を呼び出します。
+ *  - mode: 'company' | 'maker'
+ *  - onScan: (id: string) => void
+ *  - onCancel: () => void
  */
 const QRCodeScanner = ({ mode, onScan, onCancel }) => {
   const qrRegionId = 'reader';
@@ -23,7 +19,7 @@ const QRCodeScanner = ({ mode, onScan, onCancel }) => {
       (async () => {
         try {
           const devices = await Html5Qrcode.getCameras();
-          if (!devices || devices.length === 0) {
+          if (!devices?.length) {
             alert('カメラが見つかりませんでした');
             setIsScanning(false);
             return;
@@ -40,12 +36,12 @@ const QRCodeScanner = ({ mode, onScan, onCancel }) => {
               setIsScanning(false);
               onCancel?.();
             },
-            errorMessage => {
-              console.warn('読み取り中:', errorMessage);
+            errorMsg => {
+              console.warn('読み取り中:', errorMsg);
             }
           );
-        } catch (error) {
-          console.error('カメラ起動エラー:', error);
+        } catch (err) {
+          console.error('カメラ起動エラー:', err);
           alert('カメラが使用できませんでした');
           setIsScanning(false);
         }
@@ -59,26 +55,15 @@ const QRCodeScanner = ({ mode, onScan, onCancel }) => {
     };
   }, [isScanning, mode, onScan, onCancel]);
 
-  const handleCancel = () => {
-    setIsScanning(false);
-    onCancel?.();
-  };
-
   return (
     <div className="text-center">
       <h3 className="font-semibold mb-2">
         {mode === 'company' ? '会社IDスキャン中…' : 'メーカーIDスキャン中…'}
       </h3>
-      <div
-        id={qrRegionId}
-        className="w-64 h-64 mx-auto border"
-        style={{ display: isScanning ? 'block' : 'none' }}
-      />
+      <div id={qrRegionId} className="w-64 h-64 mx-auto border" style={{ display: isScanning ? 'block' : 'none' }} />
       {isScanning && (
-        <button
-          onClick={handleCancel}
-          className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
-        >
+        <button onClick={() => { setIsScanning(false); onCancel?.(); }}
+                className="mt-2 px-4 py-2 bg-red-500 text-white rounded">
           キャンセル
         </button>
       )}
