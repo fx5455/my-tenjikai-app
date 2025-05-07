@@ -167,7 +167,7 @@ const AdminOrderPdf = () => {
       <nav style={navStyle}>
         <Link to="/admin/entry" style={linkStyle}>入場スキャン</Link>
         <Link to="/admin/exit" style={linkStyle}>退場スキャン</Link>
-        <Link to="/admin/orders" style={linkStyle}>&#8212; 発注一覧</Link>
+        <Link to="/" style={linkStyle}>&#8212; 発注登録</Link>
       </nav>
       <div style={containerStyle}>
         {/* Existing Navigation & Controls */}
