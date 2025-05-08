@@ -28,24 +28,24 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
           return;
         }
 
-        // 背面カメラを優先する
+        // 背面カメラ候補
         const backCamera = devices.find(d => {
           const lbl = (d.label || '').toLowerCase();
-          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('環境');
+          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') || lbl.includes('環境');
         });
 
-        const trimmedQRRegion = qrRegionId;
-        activeScanner = new Html5Qrcode(trimmedQRRegion);
+        activeScanner = new Html5Qrcode(qrRegionId);
         scannerRef.current = activeScanner;
 
-        // 起動トライ関数
-        const startWithConfig = async config => {
+        const startWithConfig = async (cameraConfig) => {
+          console.log('[QRCodeScanner] try start with config:', cameraConfig);
           try {
             await activeScanner.start(
-              config,
+              cameraConfig,
               { fps: 10, qrbox: 250 },
               decodedText => {
                 const id = decodedText.trim();
+                console.log('[QRCodeScanner] decoded="'+id+'" mode="'+mode+'"');
                 onScan(id);
                 setIsScanning(false);
                 onCancel?.();
@@ -56,25 +56,24 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
             );
             return true;
           } catch (err) {
-            console.warn('[QRCodeScanner] start failed', config, err);
+            console.warn('[QRCodeScanner] start failed', cameraConfig, err);
             return false;
           }
         };
 
-        // 1. deviceId 指定で試行
         let started = false;
+        // 1. backCamera.id (string) で試行
         if (backCamera) {
-          const deviceConfig = { deviceId: { exact: backCamera.id } };
-          started = await startWithConfig(deviceConfig);
+          started = await startWithConfig(backCamera.id);
         }
-        // 2. facingMode でフォールバック
+        // 2. facingMode:environment で試行
         if (!started) {
-          const faceConfig = { facingMode: { ideal: 'environment' } };
-          started = await startWithConfig(faceConfig);
+          started = await startWithConfig({ facingMode: { exact: 'environment' } });
         }
-        // 3. 最終的 fallback: defaultカメラ
+        // 3. first device id (string) で最終試行
         if (!started) {
-          await startWithConfig(true);
+          console.warn('[QRCodeScanner] falling back to first device id');
+          started = await startWithConfig(devices[0].id);
         }
 
         if (!started) {
