@@ -11,14 +11,12 @@ import { Html5Qrcode } from 'html5-qrcode';
  *  - onCancel: () => void
  */
 export default function QRCodeScanner({ mode, onScan, onCancel }) {
-  // DOM要素衝突を避けるユニークID
   const qrRegionId = useRef(`qr-${mode}-${Date.now()}`).current;
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(true);
 
   useEffect(() => {
     if (!isScanning) return;
-
     const activeScanner = new Html5Qrcode(qrRegionId);
     scannerRef.current = activeScanner;
 
@@ -34,28 +32,20 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
       console.warn('[QRCodeScanner] scan error', errorMsg);
     };
 
-    const startScanning = async () => {
+    (async () => {
       try {
-        // カメラ候補を取得
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
           throw new Error('カメラが見つかりません');
         }
         console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
 
-        // 背面カメラ優先で取得
-        const backCamera = devices.find(d => {
-          const lbl = (d.label || '').toLowerCase();
-          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') || lbl.includes('ultrawide') || lbl.includes('wide') || lbl.includes('環境');
-        });
-
-        // 試行順序: 背面カメラの deviceId -> default deviceId -> facingMode exact -> facingMode ideal
+        // 環境カメラ設定とフォールバック
         const configs = [
-          backCamera ? backCamera.id : null,
-          devices[0].id,
           { facingMode: { exact: 'environment' } },
-          { facingMode: { ideal: 'environment' } }
-        ].filter(cfg => cfg != null);
+          { facingMode: { ideal: 'environment' } },
+          true // デフォルトカメラ
+        ];
 
         let started = false;
         for (const cfg of configs) {
@@ -74,31 +64,20 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
             console.warn('[QRCodeScanner] start failed for config:', cfg, e);
           }
         }
-        // 最終フォールバック: defaultカメラ
+
         if (!started) {
-          console.log('[QRCodeScanner] fallback to default(true)');
-          await activeScanner.start(
-            true,
-            { fps: 10, qrbox: 250 },
-            decodeCallback,
-            errorCallback
-          );
+          throw new Error('すべてのカメラ起動に失敗しました');
         }
       } catch (err) {
         console.error('[QRCodeScanner] camera error', err);
         alert('カメラ起動に失敗しました: ' + err.message);
         setIsScanning(false);
       }
-    };
-
-    startScanning();
+    })();
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => {})
-          .then(() => scannerRef.current.clear());
+        scannerRef.current.stop().catch(() => {}).then(() => scannerRef.current.clear());
       }
     };
   }, [isScanning, qrRegionId, mode, onScan, onCancel]);
