@@ -18,7 +18,8 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
 
   useEffect(() => {
     if (!isScanning) return;
-    let activeScanner = new Html5Qrcode(qrRegionId);
+
+    const activeScanner = new Html5Qrcode(qrRegionId);
     scannerRef.current = activeScanner;
 
     const decodeCallback = decodedText => {
@@ -28,6 +29,7 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
       setIsScanning(false);
       onCancel?.();
     };
+
     const errorCallback = errorMsg => {
       console.warn('[QRCodeScanner] scan error', errorMsg);
     };
@@ -41,11 +43,11 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
         }
         console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
 
-        // 試行順序の設定
+        // 試行順序: まずデバイスID、次に facingMode
         const configs = [
+          devices[0].id, // デフォルトカメラIDの文字列
           { facingMode: { exact: 'environment' } },
           { facingMode: { ideal: 'environment' } },
-          devices[0].id, // デフォルトカメラID
         ];
 
         let started = false;
@@ -65,8 +67,15 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
             console.warn('[QRCodeScanner] start failed for config:', cfg, e);
           }
         }
+        // 最終フォールバック: どの引数でもOK（trueでデフォルト）
         if (!started) {
-          throw new Error('すべてのカメラ起動に失敗しました');
+          console.log('[QRCodeScanner] fallback to default camera');
+          await activeScanner.start(
+            true,
+            { fps: 10, qrbox: 250 },
+            decodeCallback,
+            errorCallback
+          );
         }
       } catch (err) {
         console.error('[QRCodeScanner] camera error', err);
@@ -78,11 +87,11 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
     startScanning();
 
     return () => {
-      if (activeScanner) {
-        activeScanner
+      if (scannerRef.current) {
+        scannerRef.current
           .stop()
           .catch(() => {})
-          .then(() => activeScanner.clear());
+          .then(() => scannerRef.current.clear());
       }
     };
   }, [isScanning, qrRegionId, mode, onScan, onCancel]);
