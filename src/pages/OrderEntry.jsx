@@ -142,10 +142,12 @@ const OrderEntry = () => {
   };
 
   // スキャンハンドラ：メーカー
-  const handleMakerScan = (id) => {
-    setMakerId(id);
-    // scanningFor は onCancel でクリアされます
-  };
+   const handleMakerScan = (id) => {
+       console.log('[OrderEntry] handleMakerScan 受信 id=', id);
+       setMakerId(id);
+       // もし onCancel が何らかのタイミングで走らないならこちらでも
+       setScanningFor(null);
+     };
 
   // フォーム送信
   const handleSubmit = async () => {
@@ -249,6 +251,7 @@ const OrderEntry = () => {
           >
             <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
               <QRCodeScanner
+              key={scanningFor}            // ← 追加
                 mode={scanningFor}
                 onScan={(id) => {
                   if (scanningFor === 'company') handleCompanyScan(id);
