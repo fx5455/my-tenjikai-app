@@ -1,3 +1,4 @@
+// src/components/QRCodeScanner.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -10,18 +11,18 @@ import { Html5Qrcode } from 'html5-qrcode';
  *  - onCancel: () => void
  */
 export default function QRCodeScanner({ mode, onScan, onCancel }) {
-  // モードごとにユニークな DOM ID
+  // モードごとにユニークな DOM ID を生成
   const qrRegionId = useRef(`qr-${mode}-${Date.now()}`).current;
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(true);
 
   useEffect(() => {
     let activeScanner;
-
     if (!isScanning) return;
 
     (async () => {
       try {
+        // カメラ一覧を取得
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
           alert('カメラが見つかりません');
@@ -29,20 +30,28 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
           return;
         }
 
+        // 背面カメラを優先選択（label に "back" "rear" "環境" を含むもの）
+        const backCamera = devices.find(d => {
+          const lbl = d.label.toLowerCase();
+          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') || lbl.includes('環境');
+        }) || devices[0];
+        console.log('[QRCodeScanner] 使用 cameraId=', backCamera.id, 'label=', backCamera.label);
+
         activeScanner = new Html5Qrcode(qrRegionId);
         scannerRef.current = activeScanner;
 
+        // deviceId を指定してカメラ起動
         await activeScanner.start(
-          { facingMode: 'environment' },
+          backCamera.id,
           { fps: 10, qrbox: 250 },
-          decodedText => {
+          (decodedText) => {
             const id = decodedText.trim();
             console.log(`[QRCodeScanner] decoded="${id}" mode="${mode}"`);
             onScan(id);
             setIsScanning(false);
             onCancel?.();
           },
-          errorMsg => {
+          (errorMsg) => {
             console.warn('[QRCodeScanner] scan error', errorMsg);
           }
         );
