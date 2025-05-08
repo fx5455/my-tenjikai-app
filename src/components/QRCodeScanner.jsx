@@ -43,12 +43,19 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
         }
         console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
 
-        // 試行順序: まずデバイスID、次に facingMode
+        // 背面カメラ優先で取得
+        const backCamera = devices.find(d => {
+          const lbl = (d.label || '').toLowerCase();
+          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') || lbl.includes('ultrawide') || lbl.includes('wide') || lbl.includes('環境');
+        });
+
+        // 試行順序: 背面カメラの deviceId -> default deviceId -> facingMode exact -> facingMode ideal
         const configs = [
-          devices[0].id, // デフォルトカメラIDの文字列
+          backCamera ? backCamera.id : null,
+          devices[0].id,
           { facingMode: { exact: 'environment' } },
-          { facingMode: { ideal: 'environment' } },
-        ];
+          { facingMode: { ideal: 'environment' } }
+        ].filter(cfg => cfg != null);
 
         let started = false;
         for (const cfg of configs) {
@@ -67,9 +74,9 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
             console.warn('[QRCodeScanner] start failed for config:', cfg, e);
           }
         }
-        // 最終フォールバック: どの引数でもOK（trueでデフォルト）
+        // 最終フォールバック: defaultカメラ
         if (!started) {
-          console.log('[QRCodeScanner] fallback to default camera');
+          console.log('[QRCodeScanner] fallback to default(true)');
           await activeScanner.start(
             true,
             { fps: 10, qrbox: 250 },
