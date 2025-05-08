@@ -17,6 +17,7 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
 
   useEffect(() => {
     if (!isScanning) return;
+
     const activeScanner = new Html5Qrcode(qrRegionId);
     scannerRef.current = activeScanner;
 
@@ -40,11 +41,11 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
         }
         console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
 
-        // 環境カメラを優先: exact -> ideal -> デフォルトデバイスID -> プラットフォームデフォルト
+        // 起動順序: 1. Webカメラまたは最初のデバイスID 2. facingMode:environment exact 3. facingMode:environment ideal 4. プラットフォームデフォルト
         const configs = [
+          devices[0].id,
           { facingMode: { exact: 'environment' } },
           { facingMode: { ideal: 'environment' } },
-          devices[0].id,
           true
         ];
 
