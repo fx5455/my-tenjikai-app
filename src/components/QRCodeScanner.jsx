@@ -6,62 +6,57 @@ import { Html5Qrcode } from 'html5-qrcode';
  *
  * Props:
  *  - mode: 'company' | 'maker'
- *  - onScan: (id: string) => void  // コールバックで読み取ったIDを返す
- *  - onCancel: () => void         // キャンセル時のハンドラ
+ *  - onScan: (id: string) => void
+ *  - onCancel: () => void
  */
-const QRCodeScanner = ({ mode, onScan, onCancel }) => {
-  // ユニークIDを生成して複数モードでもDOM衝突を防ぐ
-  const qrRegionId = useRef(`qr-reader-${mode}-${Date.now()}`).current;
+export default function QRCodeScanner({ mode, onScan, onCancel }) {
+  // モードごとにユニークな DOM ID
+  const qrRegionId = useRef(`qr-${mode}-${Date.now()}`).current;
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(true);
 
   useEffect(() => {
     let activeScanner;
-    if (isScanning) {
-      (async () => {
-        try {
-          // カメラ取得
-          const devices = await Html5Qrcode.getCameras();
-          if (!devices || devices.length === 0) {
-            alert('カメラが見つかりませんでした');
-            setIsScanning(false);
-            return;
-          }
 
-          // インスタンス生成
-          activeScanner = new Html5Qrcode(qrRegionId);
-          scannerRef.current = activeScanner;
+    if (!isScanning) return;
 
-          // 読み取り開始
-          await activeScanner.start(
-            { facingMode: 'environment' },
-            { fps: 10, qrbox: 250 },
-            (decodedText) => {
-              const id = decodedText.trim();
-              console.log(`[QRCodeScanner] decodedText="${id}" mode="${mode}"`);
-              // 読み取ったIDを親コンポーネントへ渡す
-              onScan(id);
-              setIsScanning(false);
-              onCancel && onCancel();
-            },
-            (errorMsg) => {
-              console.warn('[QRCodeScanner] 読み取り中:', errorMsg);
-            }
-          );
-        } catch (err) {
-          console.error('[QRCodeScanner] カメラ起動エラー:', err);
-          alert('カメラが使用できませんでした');
+    (async () => {
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (!devices || devices.length === 0) {
+          alert('カメラが見つかりません');
           setIsScanning(false);
+          return;
         }
-      })();
-    }
+
+        activeScanner = new Html5Qrcode(qrRegionId);
+        scannerRef.current = activeScanner;
+
+        await activeScanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: 250 },
+          decodedText => {
+            const id = decodedText.trim();
+            console.log(`[QRCodeScanner] decoded="${id}" mode="${mode}"`);
+            onScan(id);
+            setIsScanning(false);
+            onCancel?.();
+          },
+          errorMsg => {
+            console.warn('[QRCodeScanner] scan error', errorMsg);
+          }
+        );
+      } catch (err) {
+        console.error('[QRCodeScanner] camera error', err);
+        alert('カメラ起動に失敗しました');
+        setIsScanning(false);
+      }
+    })();
+
     return () => {
-      // コンポーネントアンマウント時に停止・クリア
       const sc = scannerRef.current;
       if (sc) {
-        sc.stop()
-          .catch(() => {})
-          .then(() => sc.clear());
+        sc.stop().catch(() => {}).then(() => sc.clear());
       }
     };
   }, [isScanning, qrRegionId, mode, onScan, onCancel]);
@@ -78,7 +73,7 @@ const QRCodeScanner = ({ mode, onScan, onCancel }) => {
       />
       {isScanning && (
         <button
-          onClick={() => { setIsScanning(false); onCancel && onCancel(); }}
+          onClick={() => { setIsScanning(false); onCancel?.(); }}
           className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
         >
           キャンセル
@@ -86,6 +81,4 @@ const QRCodeScanner = ({ mode, onScan, onCancel }) => {
       )}
     </div>
   );
-};
-
-export default QRCodeScanner;
+}

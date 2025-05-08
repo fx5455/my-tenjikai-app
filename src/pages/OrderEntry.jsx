@@ -242,26 +242,34 @@ const OrderEntry = () => {
 
         {/* スキャンモーダル */}
         {scanningFor && (
-          <div
-            style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.5)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-            }}
-          >
-            <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
-              <QRCodeScanner
-              key={scanningFor}            // ← 追加
-                mode={scanningFor}
-                onScan={(id) => {
-                  if (scanningFor === 'company') handleCompanyScan(id);
-                  else if (scanningFor === 'maker') handleMakerScan(id);
-                }}
-                onCancel={() => setScanningFor(null)}
-              />
-            </div>
-          </div>
-        )}
+  <div
+    style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000,
+    }}
+  >
+    <div style={{
+      background: '#fff',
+      padding: '16px',
+      borderRadius: '4px',
+      color: '#000'
+    }}>
+      <QRCodeScanner
+        key={scanningFor}                              // ← 必須：モードが変わるたびに再マウント
+        mode={scanningFor}
+        onScan={
+          scanningFor === 'company'
+            ? handleCompanyScan
+            : handleMakerScan
+        }
+        onCancel={() => setScanningFor(null)}
+      />
+    </div>
+  </div>
+)}
 
         {/* お客様／メーカー */}
         <div style={{ ...sectionStyle, display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
