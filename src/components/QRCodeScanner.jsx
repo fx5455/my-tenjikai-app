@@ -40,11 +40,12 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
         }
         console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
 
-        // 環境カメラを優先して起動
+        // 優先順: まず最初のカメラID (webカメラ対応) → 環境カメラ exact → 環境カメラ ideal → default
         const configs = [
-          // ideal:environment で背面カメラを優先
+          devices[0].id,
+          { deviceId: { exact: devices[0].id } },
+          { facingMode: { exact: 'environment' } },
           { facingMode: { ideal: 'environment' } },
-          // 最終フォールバック: デフォルトカメラ
           true
         ];
 
