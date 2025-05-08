@@ -11,7 +11,7 @@ import { Html5Qrcode } from 'html5-qrcode';
  *  - onCancel: () => void
  */
 export default function QRCodeScanner({ mode, onScan, onCancel }) {
-  // モードごとにユニークな DOM ID を生成
+  // ユニークな DOM ID
   const qrRegionId = useRef(`qr-${mode}-${Date.now()}`).current;
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(true);
@@ -30,28 +30,34 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
           return;
         }
 
-        // 背面カメラを優先選択（label に "back" "rear" "環境" を含むもの）
+        // 背面カメラ優先選択 by label
         const backCamera = devices.find(d => {
-          const lbl = d.label.toLowerCase();
-          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') || lbl.includes('環境');
-        }) || devices[0];
-        console.log('[QRCodeScanner] 使用 cameraId=', backCamera.id, 'label=', backCamera.label);
+          const lbl = (d.label || '').toLowerCase();
+          return lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') || lbl.includes('ultrawide') || lbl.includes('wide') || lbl.includes('環境');
+        }) || null;
+
+        // カメラ起動のための Constraints
+        const cameraConfig = backCamera
+          ? { deviceId: { exact: backCamera.id } }
+          : { facingMode: { ideal: 'environment' } };
+
+        console.log('[QRCodeScanner] cameraConfig=', cameraConfig, backCamera ? `picked ${backCamera.label}` : 'using facingMode');
 
         activeScanner = new Html5Qrcode(qrRegionId);
         scannerRef.current = activeScanner;
 
-        // deviceId を指定してカメラ起動
+        // Constraints を用いてカメラ開始
         await activeScanner.start(
-          backCamera.id,
+          cameraConfig,
           { fps: 10, qrbox: 250 },
-          (decodedText) => {
+          decodedText => {
             const id = decodedText.trim();
             console.log(`[QRCodeScanner] decoded="${id}" mode="${mode}"`);
             onScan(id);
             setIsScanning(false);
             onCancel?.();
           },
-          (errorMsg) => {
+          errorMsg => {
             console.warn('[QRCodeScanner] scan error', errorMsg);
           }
         );
@@ -64,9 +70,7 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
 
     return () => {
       const sc = scannerRef.current;
-      if (sc) {
-        sc.stop().catch(() => {}).then(() => sc.clear());
-      }
+      if (sc) sc.stop().catch(() => {}).then(() => sc.clear());
     };
   }, [isScanning, qrRegionId, mode, onScan, onCancel]);
 
