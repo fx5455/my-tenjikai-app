@@ -142,12 +142,11 @@ const OrderEntry = () => {
   };
 
   // スキャンハンドラ：メーカー
-   const handleMakerScan = (id) => {
-       console.log('[OrderEntry] handleMakerScan 受信 id=', id);
-       setMakerId(id);
-       // もし onCancel が何らかのタイミングで走らないならこちらでも
-       setScanningFor(null);
-     };
+  const handleMakerScan = (id) => {
+    console.log('[OrderEntry] handleMakerScan 受信 id=', id);
+    setMakerId(id);
+    setScanningFor(null);
+  };
 
   // フォーム送信
   const handleSubmit = async () => {
@@ -174,6 +173,18 @@ const OrderEntry = () => {
         await addDoc(collection(db, 'orders'), payload);
         alert('登録しました');
       }
+
+      // リセット：メーカーID以外を初期化
+      setOrders([{ itemCode: '', name: '', quantity: '', price: '', remarks: '' }]);
+      setCompanyId('');
+      // companyName は effect で空になります
+      setDeliveryOption('会社入れ');
+      setCustomAddress('納品先住所');
+      setTakahashiContact('');
+      setPersonName('');
+      setDeliveryDate('');
+      setExistingOrderId(null);
+      setIsEditing(false);
     } catch (error) {
       console.error(error);
       alert('送信に失敗しました');
@@ -181,42 +192,11 @@ const OrderEntry = () => {
   };
 
   // 共通スタイル定義
-  const containerStyle = {
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '16px',
-    backgroundColor: '#fff',
-    color: '#000',
-  };
-  const cardStyle = {
-    background: '#fff',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    padding: '16px',
-    marginBottom: '16px',
-    color: '#000',
-  };
-  const sectionStyle = {
-    marginBottom: '16px',
-    padding: '12px',
-    background: '#f7f7f7',
-    borderRadius: '4px',
-    color: '#000',
-  };
-  const inputStyle = {
-    width: '100%',
-    padding: '8px',
-    borderRadius: '4px',
-    border: '1px solid #ccc',
-    backgroundColor: '#fff',
-    color: '#000',
-  };
-  const buttonStyle = {
-    padding: '10px 20px',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  };
+  const containerStyle = { maxWidth: '800px', margin: '0 auto', padding: '16px', backgroundColor: '#fff', color: '#000' };
+  const cardStyle = { background: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', padding: '16px', marginBottom: '16px', color: '#000' };
+  const sectionStyle = { marginBottom: '16px', padding: '12px', background: '#f7f7f7', borderRadius: '4px', color: '#000' };
+  const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', color: '#000' };
+  const buttonStyle = { padding: '10px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer' };
 
   return (
     <div style={containerStyle}>
@@ -228,48 +208,24 @@ const OrderEntry = () => {
 
         {/* 管理画面ボタン */}
         <div style={{ textAlign: 'right', marginBottom: '12px' }}>
-          <button
-            onClick={handleAdminClick}
-            style={{
-              ...buttonStyle,
-              background: '#10B981',
-              color: '#fff',
-            }}
-          >
+          <button onClick={handleAdminClick} style={{ ...buttonStyle, background: '#10B981', color: '#fff' }}>
             管理画面
           </button>
         </div>
 
         {/* スキャンモーダル */}
         {scanningFor && (
-  <div
-    style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000,
-    }}
-  >
-    <div style={{
-      background: '#fff',
-      padding: '16px',
-      borderRadius: '4px',
-      color: '#000'
-    }}>
-      <QRCodeScanner
-        key={scanningFor}                              // ← 必須：モードが変わるたびに再マウント
-        mode={scanningFor}
-        onScan={
-          scanningFor === 'company'
-            ? handleCompanyScan
-            : handleMakerScan
-        }
-        onCancel={() => setScanningFor(null)}
-      />
-    </div>
-  </div>
-)}
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '4px', color: '#000' }}>
+              <QRCodeScanner
+                key={scanningFor}
+                mode={scanningFor}
+                onScan={scanningFor === 'company' ? handleCompanyScan : handleMakerScan}
+                onCancel={() => setScanningFor(null)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* お客様／メーカー */}
         <div style={{ ...sectionStyle, display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
