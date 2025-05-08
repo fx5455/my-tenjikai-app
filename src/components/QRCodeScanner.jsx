@@ -1,9 +1,8 @@
+// src/components/QRCodeScanner.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 /**
- * QRCodeScanner.jsx
- *
  * Props:
  *  - mode: 'company' | 'maker'
  *  - onScan: (id: string) => void
@@ -17,11 +16,11 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
 
   useEffect(() => {
     let activeScanner;
-
     if (!isScanning) return;
 
     (async () => {
       try {
+        // ① カメラ一覧を取得
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
           alert('カメラが見つかりません');
@@ -29,11 +28,16 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
           return;
         }
 
+        // ② 一番目のカメラの deviceId を使う（iOSで確実に背面カメラを選択）
+        const cameraId = devices[0].id;
+        console.log('[QRCodeScanner] 使用 cameraId=', cameraId);
+
         activeScanner = new Html5Qrcode(qrRegionId);
         scannerRef.current = activeScanner;
 
+        // ③ deviceId を第一引数にして start() を呼び出す
         await activeScanner.start(
-          { facingMode: 'environment' },
+          cameraId,
           { fps: 10, qrbox: 250 },
           decodedText => {
             const id = decodedText.trim();
