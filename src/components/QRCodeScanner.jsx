@@ -10,82 +10,53 @@ import { Html5Qrcode } from 'html5-qrcode';
  *  - onScan: (id: string) => void
  *  - onCancel: () => void
  */
-export default function QRCodeScanner({ mode, onScan, onCancel }) {
-  const qrRegionId = useRef(`qr-${mode}-${Date.now()}`).current;
+const QRCodeScanner = ({ mode, onScan, onCancel }) => {
+  const qrRegionId = 'reader';
   const scannerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(true);
 
   useEffect(() => {
+    let activeScanner;
     if (!isScanning) return;
-
-    const activeScanner = new Html5Qrcode(qrRegionId);
-    scannerRef.current = activeScanner;
-
-    const decodeCallback = decodedText => {
-      const id = decodedText.trim();
-      console.log(`[QRCodeScanner] decoded="${id}" mode="${mode}"`);
-      onScan(id);
-      setIsScanning(false);
-      onCancel?.();
-    };
-
-    const errorCallback = errorMsg => {
-      console.warn('[QRCodeScanner] scan error', errorMsg);
-    };
 
     (async () => {
       try {
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
-          throw new Error('カメラが見つかりません');
+          alert('カメラが見つかりませんでした');
+          setIsScanning(false);
+          return;
         }
-        console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
+        activeScanner = new Html5Qrcode(qrRegionId);
+        scannerRef.current = activeScanner;
 
-        // 起動順序: 1. Webカメラまたは最初のデバイスID 2. facingMode:environment exact 3. facingMode:environment ideal 4. プラットフォームデフォルト
-        const configs = [
-          devices[0].id,
-          { facingMode: { exact: 'environment' } },
-          { facingMode: { ideal: 'environment' } },
-          true
-        ];
-
-        let started = false;
-        for (const cfg of configs) {
-          try {
-            console.log('[QRCodeScanner] try start with config:', cfg);
-            await activeScanner.start(
-              cfg,
-              { fps: 10, qrbox: 250 },
-              decodeCallback,
-              errorCallback
-            );
-            started = true;
-            console.log('[QRCodeScanner] start succeeded with config:', cfg);
-            break;
-          } catch (e) {
-            console.warn('[QRCodeScanner] start failed for config:', cfg, e);
+        await activeScanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: 250 },
+          decodedText => {
+            const id = decodedText.trim();
+            onScan(id);
+            setIsScanning(false);
+            onCancel();
+          },
+          errorMsg => {
+            console.warn('読み取り中エラー:', errorMsg);
           }
-        }
-
-        if (!started) {
-          throw new Error('すべてのカメラ起動に失敗しました');
-        }
-      } catch (err) {
-        console.error('[QRCodeScanner] camera error', err);
-        alert('カメラ起動に失敗しました: ' + err.message);
+        );
+      } catch (error) {
+        console.error('カメラ起動エラー:', error);
+        alert('カメラが使用できませんでした');
         setIsScanning(false);
       }
     })();
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => {})
-          .then(() => scannerRef.current.clear());
+      const sc = scannerRef.current;
+      if (sc) {
+        sc.stop().catch(() => {}).then(() => sc.clear());
       }
     };
-  }, [isScanning, qrRegionId, mode, onScan, onCancel]);
+  }, [isScanning, mode, onScan, onCancel]);
 
   return (
     <div className="text-center">
@@ -99,7 +70,7 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
       />
       {isScanning && (
         <button
-          onClick={() => { setIsScanning(false); onCancel?.(); }}
+          onClick={() => { setIsScanning(false); onCancel(); }}
           className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
         >
           キャンセル
@@ -107,4 +78,6 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
       )}
     </div>
   );
-}
+};
+
+export default QRCodeScanner;
