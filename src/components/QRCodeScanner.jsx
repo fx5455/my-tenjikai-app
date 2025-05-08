@@ -40,11 +40,12 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
         }
         console.log('[QRCodeScanner] found devices', devices.map(d => d.label));
 
-        // 環境カメラ設定とフォールバック
+        // 環境カメラを優先して起動
         const configs = [
-          { facingMode: { exact: 'environment' } },
+          // ideal:environment で背面カメラを優先
           { facingMode: { ideal: 'environment' } },
-          true // デフォルトカメラ
+          // 最終フォールバック: デフォルトカメラ
+          true
         ];
 
         let started = false;
@@ -77,7 +78,10 @@ export default function QRCodeScanner({ mode, onScan, onCancel }) {
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {}).then(() => scannerRef.current.clear());
+        scannerRef.current
+          .stop()
+          .catch(() => {})
+          .then(() => scannerRef.current.clear());
       }
     };
   }, [isScanning, qrRegionId, mode, onScan, onCancel]);
